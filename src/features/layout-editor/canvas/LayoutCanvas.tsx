@@ -23,6 +23,7 @@ type LayoutCanvasProps = {
   selectedMonitor: MonitorInfo;
   showSafeArea: boolean;
   onMoveElement: (id: ElementId, x: number, y: number) => void;
+  onCommitElementMove: (id: ElementId, before: Point, after: Point) => void;
   onSelect: (id: ElementId) => void;
   onShowSafeAreaChange: (show: boolean) => void;
 };
@@ -49,12 +50,12 @@ function centeredPan(width: number, height: number, monitor: MonitorInfo, scale:
   };
 }
 
-export function LayoutCanvas({ elements, selectedId, selectedMonitor, showSafeArea, onMoveElement, onSelect, onShowSafeAreaChange }: LayoutCanvasProps) {
+export function LayoutCanvas({ elements, selectedId, selectedMonitor, showSafeArea, onMoveElement, onCommitElementMove, onSelect, onShowSafeAreaChange }: LayoutCanvasProps) {
   const stageShellRef = useRef<HTMLDivElement>(null);
   const isPanningRef = useRef(false);
   const lastPanPointerRef = useRef<Point | null>(null);
   const spacePressedRef = useRef(false);
-  const elementDragRef = useRef<{ id: ElementId; offset: Point } | null>(null);
+  const elementDragRef = useRef<{ id: ElementId; offset: Point; start: Point; latest: Point } | null>(null);
   const [viewportSize, setViewportSize] = useState({ width: 640, height: 360 });
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState<Point>(() => centeredPan(640, 360, selectedMonitor, fitScaleForViewport(640, 360, selectedMonitor)));
@@ -135,6 +136,9 @@ export function LayoutCanvas({ elements, selectedId, selectedMonitor, showSafeAr
     const nextY = parentRect ? (worldY - parentRect.y) / parentRect.height : worldY / selectedMonitor.height;
 
     onMoveElement(id, nextX, nextY);
+    if (elementDragRef.current?.id === id) {
+      elementDragRef.current.latest = { x: nextX, y: nextY };
+    }
   }
 
   function stagePointerToWorld(pointer: Point): Point {
@@ -155,13 +159,22 @@ export function LayoutCanvas({ elements, selectedId, selectedMonitor, showSafeAr
       return;
     }
 
-    const rect = worldRect(getElement(elements, id)!, elements, selectedMonitor.width, selectedMonitor.height);
+    const element = getElement(elements, id)!;
+    const rect = worldRect(element, elements, selectedMonitor.width, selectedMonitor.height);
     const worldPointer = stagePointerToWorld(pointer);
     elementDragRef.current = {
       id,
       offset: {
         x: worldPointer.x - rect.anchorX,
         y: worldPointer.y - rect.anchorY,
+      },
+      start: {
+        x: element.fields.x.currentValue,
+        y: element.fields.y.currentValue,
+      },
+      latest: {
+        x: element.fields.x.currentValue,
+        y: element.fields.y.currentValue,
       },
     };
     event.cancelBubble = true;
@@ -249,6 +262,10 @@ export function LayoutCanvas({ elements, selectedId, selectedMonitor, showSafeAr
   }
 
   function stopPanning() {
+    const activeElementDrag = elementDragRef.current;
+    if (activeElementDrag) {
+      onCommitElementMove(activeElementDrag.id, activeElementDrag.start, activeElementDrag.latest);
+    }
     isPanningRef.current = false;
     lastPanPointerRef.current = null;
     elementDragRef.current = null;

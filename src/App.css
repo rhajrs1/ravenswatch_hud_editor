@@ -130,6 +130,12 @@ button:hover {
   gap: 12px;
 }
 
+.header-left-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .header-actions {
   display: flex;
   flex: 0 0 auto;
@@ -171,6 +177,26 @@ button:hover {
 .header-action {
   height: 32px;
   padding: 0 12px;
+}
+
+.header-icon-action {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  padding: 0;
+  color: #cbd5e1;
+}
+
+.header-icon-action:disabled {
+  border-color: transparent;
+  background: transparent;
+  color: #475569;
+  cursor: default;
+}
+
+.header-icon-action:disabled:hover {
+  border-color: transparent;
 }
 
 .header-action.primary {

@@ -6,6 +6,8 @@ import "./App.css";
 import { LayoutCanvas } from "./features/layout-editor/canvas/LayoutCanvas";
 import { ElementTreeSection } from "./features/layout-editor/element-tree/ElementTree";
 import { AppHeader } from "./features/layout-editor/header/AppHeader";
+import { applyLayoutCommand, createLayoutCommand } from "./features/layout-editor/history/layoutHistoryModel";
+import type { LayoutCommand, LayoutFieldChange, LayoutFieldName } from "./features/layout-editor/history/layoutHistoryModel";
 import { parseHexOffset, readLayoutValues, saveLayoutValues } from "./features/layout-editor/model/persistence";
 import { initialElements, mergeElementSchema } from "./features/layout-editor/model/schema";
 import type { ElementId, GameFolderState, LayoutElement, MonitorInfo, NativeMonitorInfo } from "./features/layout-editor/model/types";
@@ -13,6 +15,7 @@ import { MonitorSection } from "./features/layout-editor/monitor/MonitorSection"
 import { PropertyPanel } from "./features/layout-editor/properties/PropertyPanel";
 
 const TARGET_ASPECT = 16 / 9;
+const MAX_HISTORY = 100;
 const FALLBACK_MONITOR: MonitorInfo = {
   id: "fallback-5120x1440",
   name: "Display 1",
@@ -23,6 +26,10 @@ const FALLBACK_MONITOR: MonitorInfo = {
   scaleFactor: 1,
   isPrimary: true,
 };
+
+function pushHistory(stack: LayoutCommand[], command: LayoutCommand) {
+  return [...stack, command].slice(-MAX_HISTORY);
+}
 
 function App() {
   const shellRef = useRef<HTMLDivElement>(null);
@@ -35,6 +42,8 @@ function App() {
   const [presetMenuOpen, setPresetMenuOpen] = useState(false);
   const [gameState, setGameState] = useState<GameFolderState | null>(null);
   const [gameStateError, setGameStateError] = useState<string | null>(null);
+  const [undoStack, setUndoStack] = useState<LayoutCommand[]>([]);
+  const [redoStack, setRedoStack] = useState<LayoutCommand[]>([]);
 
   useEffect(() => {
     setElements((current) => mergeElementSchema(current));
@@ -76,6 +85,8 @@ function App() {
           ) as LayoutElement["fields"],
         })),
       );
+      setUndoStack([]);
+      setRedoStack([]);
     }
 
     loadLayoutValues().catch((error) => {
@@ -161,55 +172,59 @@ function App() {
   }
 
   function resetToDefaults() {
-    setElements((current) =>
-      current.map((element) => ({
-        ...element,
-        fields: Object.fromEntries(
-          Object.entries(element.fields).map(([key, value]) => [
-            key,
-            { ...value, currentValue: value.defaultValue },
-          ]),
-        ) as LayoutElement["fields"],
-      })),
+    const command = createLayoutCommand(
+      "Reset Defaults",
+      elements.flatMap((element) =>
+        (Object.keys(element.fields) as LayoutFieldName[]).map((field) => ({
+          elementId: element.id,
+          field,
+          before: element.fields[field].currentValue,
+          after: element.fields[field].defaultValue,
+        })),
+      ),
     );
+    if (!command) {
+      return;
+    }
+
+    commitCommand(command);
   }
 
   function applySafeAreaPreset() {
     const safeAreaLeftX = safeLeft / selectedMonitor.width;
     const safeAreaRightX = (selectedMonitor.width - safeLeft) / selectedMonitor.width;
+    const changes: LayoutFieldChange[] = elements.flatMap((element): LayoutFieldChange[] => {
+      if (element.id === "left-frame") {
+        return [{
+          elementId: element.id,
+          field: "x" as const,
+          before: element.fields.x.currentValue,
+          after: safeAreaLeftX,
+        }];
+      }
+      if (element.id === "right-frame") {
+        return [{
+          elementId: element.id,
+          field: "x" as const,
+          before: element.fields.x.currentValue,
+          after: safeAreaRightX,
+        }];
+      }
+      if (element.id === "hud-left" || element.id === "hud-right") {
+        return [{
+          elementId: element.id,
+          field: "x" as const,
+          before: element.fields.x.currentValue,
+          after: element.fields.x.defaultValue,
+        }];
+      }
+      return [];
+    });
+    const command = createLayoutCommand("Apply 16:9 Safe Area", changes);
+    if (command) {
+      commitCommand(command);
+    }
 
-    setElements((current) =>
-      current.map((element) => {
-        if (element.id === "left-frame") {
-          return {
-            ...element,
-            fields: {
-              ...element.fields,
-              x: { ...element.fields.x, currentValue: safeAreaLeftX },
-            },
-          };
-        }
-        if (element.id === "right-frame") {
-          return {
-            ...element,
-            fields: {
-              ...element.fields,
-              x: { ...element.fields.x, currentValue: safeAreaRightX },
-            },
-          };
-        }
-        if (element.id === "hud-left" || element.id === "hud-right") {
-          return {
-            ...element,
-            fields: {
-              ...element.fields,
-              x: { ...element.fields.x, currentValue: element.fields.x.defaultValue },
-            },
-          };
-        }
-        return element;
-      }),
-    );
     setPresetMenuOpen(false);
   }
 
@@ -245,6 +260,28 @@ function App() {
     );
   }
 
+  function commitElementMove(id: LayoutElement["id"], before: { x: number; y: number }, after: { x: number; y: number }) {
+    const command = createLayoutCommand("Move Element", [
+      {
+        elementId: id,
+        field: "x",
+        before: before.x,
+        after: after.x,
+      },
+      {
+        elementId: id,
+        field: "y",
+        before: before.y,
+        after: after.y,
+      },
+    ]);
+
+    if (command) {
+      setUndoStack((current) => pushHistory(current, command));
+      setRedoStack([]);
+    }
+  }
+
   function updateElementField(
     id: LayoutElement["id"],
     fieldName: keyof LayoutElement["fields"],
@@ -272,6 +309,80 @@ function App() {
     );
   }
 
+  function commitElementField(
+    id: LayoutElement["id"],
+    fieldName: keyof LayoutElement["fields"],
+    before: number,
+    after: number,
+  ) {
+    const command = createLayoutCommand("Edit Field", [
+      {
+        elementId: id,
+        field: fieldName,
+        before,
+        after,
+      },
+    ]);
+
+    if (command) {
+      setUndoStack((current) => pushHistory(current, command));
+      setRedoStack([]);
+    }
+  }
+
+  function commitCommand(command: LayoutCommand) {
+    setElements((current) => applyLayoutCommand(current, command, "after"));
+    setUndoStack((current) => pushHistory(current, command));
+    setRedoStack([]);
+  }
+
+  function undoLayoutChange() {
+    setUndoStack((currentUndoStack) => {
+      const command = currentUndoStack[currentUndoStack.length - 1];
+      if (!command) {
+        return currentUndoStack;
+      }
+
+      setElements((current) => applyLayoutCommand(current, command, "before"));
+      setRedoStack((currentRedoStack) => [...currentRedoStack, command]);
+      return currentUndoStack.slice(0, -1);
+    });
+  }
+
+  function redoLayoutChange() {
+    setRedoStack((currentRedoStack) => {
+      const command = currentRedoStack[currentRedoStack.length - 1];
+      if (!command) {
+        return currentRedoStack;
+      }
+
+      setElements((current) => applyLayoutCommand(current, command, "after"));
+      setUndoStack((currentUndoStack) => pushHistory(currentUndoStack, command));
+      return currentRedoStack.slice(0, -1);
+    });
+  }
+
+  useEffect(() => {
+    function handleHistoryShortcut(event: KeyboardEvent) {
+      if (!event.ctrlKey || event.altKey || event.metaKey) {
+        return;
+      }
+
+      const key = event.key.toLowerCase();
+      if (key === "z") {
+        event.preventDefault();
+        undoLayoutChange();
+      }
+      if (key === "y") {
+        event.preventDefault();
+        redoLayoutChange();
+      }
+    }
+
+    window.addEventListener("keydown", handleHistoryShortcut);
+    return () => window.removeEventListener("keydown", handleHistoryShortcut);
+  }, []);
+
   function toggleSection(id: string) {
     setCollapsedSections((current) => ({
       ...current,
@@ -292,13 +403,17 @@ function App() {
   return (
     <main className="app" ref={shellRef}>
       <AppHeader
+        canRedo={redoStack.length > 0}
+        canUndo={undoStack.length > 0}
         gameState={gameState}
         presetMenuOpen={presetMenuOpen}
         onApplySafeAreaPreset={applySafeAreaPreset}
         onBrowseGameFolder={browseGameFolder}
+        onRedo={redoLayoutChange}
         onResetDefaults={resetToDefaults}
         onSaveLayout={saveLayout}
         onTogglePresetMenu={() => setPresetMenuOpen((open) => !open)}
+        onUndo={undoLayoutChange}
       />
 
       {gameState === null && gameStateError === null ? (
@@ -335,6 +450,7 @@ function App() {
           selectedId={selectedId}
           selectedMonitor={selectedMonitor}
           showSafeArea={showSafeArea}
+          onCommitElementMove={commitElementMove}
           onMoveElement={updateElementPosition}
           onSelect={setSelectedId}
           onShowSafeAreaChange={setShowSafeArea}
@@ -344,6 +460,7 @@ function App() {
           collapsedSections={collapsedSections}
           selected={selected}
           selectedMonitor={selectedMonitor}
+          onCommitElementField={commitElementField}
           onToggleSection={toggleSection}
           onUpdateElementField={updateElementField}
         />
