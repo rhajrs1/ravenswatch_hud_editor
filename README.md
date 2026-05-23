@@ -10,9 +10,9 @@ I made this because playing Ravenswatch on an ultrawide monitor made the left an
 
 ![Before](docs/images/before.jpg)
 
-### Basic Setup (5120 x 1440)
+### Basic Setup
 
-![Basic Setup (5120 x 1440)](docs/images/basic-setup-5120x1440.jpg)
+![Basic Setup](docs/images/basic-setup-5120x1440.jpg)
 
 ### Custom Layout
 
@@ -27,7 +27,7 @@ I made this because playing Ravenswatch on an ultrawide monitor made the left an
 Ravenswatch HUD Layout Editor lets you adjust selected HUD frames and elements visually instead of editing the cooked layout file by hand.
 
 - Drag HUD frames and elements on a monitor preview
-- Apply `Basic Setup (5120 x 1440)`
+- Apply `Basic Setup`
 - Toggle editor-only element visibility
 - Preview layout against detected monitors
 - Use undo and redo while editing
@@ -68,13 +68,13 @@ On startup, the editor tries to detect the Ravenswatch install folder automatica
 
 1. Open the editor.
 2. Confirm or select the Ravenswatch game folder.
-3. Apply `Basic Setup (5120 x 1440)` or drag HUD elements manually.
+3. Apply `Basic Setup` or drag HUD elements manually.
 4. Click `Save`.
 5. Launch the game and check the layout.
 
 ## Presets
 
-`Basic Setup (5120 x 1440)` moves the left and right HUD frames inward toward a centered 16:9 safe area.
+`Basic Setup` moves the left and right HUD frames inward toward a centered 16:9 safe area.
 
 More presets may be added later.
 
