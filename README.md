@@ -4,6 +4,8 @@ A visual HUD layout editor for Ravenswatch.
 
 I made this because playing Ravenswatch on an ultrawide monitor made the left and right HUD groups too far apart to read comfortably.
 
+It can also be useful on regular monitors if you want to reposition individual HUD elements.
+
 ## Preview
 
 ### Before
