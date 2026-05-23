@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import "./App.css";
@@ -26,13 +26,11 @@ const FALLBACK_MONITOR: MonitorInfo = {
 
 function App() {
   const shellRef = useRef<HTMLDivElement>(null);
-  const canvasPanelRef = useRef<HTMLElement>(null);
   const [elements, setElements] = useState(initialElements);
   const [selectedId, setSelectedId] = useState<LayoutElement["id"]>("hud-right");
   const [monitors, setMonitors] = useState<MonitorInfo[]>([FALLBACK_MONITOR]);
   const [selectedMonitorId, setSelectedMonitorId] = useState(FALLBACK_MONITOR.id);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
-  const [canvasSize, setCanvasSize] = useState({ width: 640, height: 360 });
   const [showSafeArea, setShowSafeArea] = useState(true);
   const [presetMenuOpen, setPresetMenuOpen] = useState(false);
   const [gameState, setGameState] = useState<GameFolderState | null>(null);
@@ -97,26 +95,6 @@ function App() {
   const safeWidth = selectedMonitor.height * TARGET_ASPECT;
   const safeLeft = Math.max(0, (selectedMonitor.width - safeWidth) / 2);
   const normalizedInset = safeLeft / selectedMonitor.height;
-  const availableStageWidth = Math.max(240, canvasSize.width - 36);
-  const availableStageHeight = Math.max(160, canvasSize.height - 72);
-  const stageScale = Math.min(
-    availableStageWidth / selectedMonitor.width,
-    availableStageHeight / selectedMonitor.height,
-  );
-  const stageWidth = Math.round(selectedMonitor.width * stageScale);
-  const stageHeight = Math.round(selectedMonitor.height * stageScale);
-  const scale = stageScale;
-
-  const safeArea = useMemo(
-    () => ({
-      x: safeLeft * scale,
-      y: 0,
-      width: Math.min(safeWidth, selectedMonitor.width) * scale,
-      height: selectedMonitor.height * scale,
-    }),
-    [safeLeft, safeWidth, scale, selectedMonitor.height, selectedMonitor.width],
-  );
-
   useEffect(() => {
     async function loadGameState() {
       try {
@@ -242,23 +220,6 @@ function App() {
     await saveLayoutValues(gameState.gameDir, elements);
   }
 
-  useEffect(() => {
-    const node = canvasPanelRef.current;
-    if (!node) {
-      return;
-    }
-
-    const updateSize = () => {
-      const rect = node.getBoundingClientRect();
-      setCanvasSize({ width: rect.width, height: rect.height });
-    };
-
-    updateSize();
-    const observer = new ResizeObserver(updateSize);
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, []);
-
   function updateElementPosition(id: LayoutElement["id"], nextX: number, nextY: number) {
     setElements((current) =>
       current.map((element) => {
@@ -370,15 +331,10 @@ function App() {
         </aside>
 
         <LayoutCanvas
-          canvasPanelRef={canvasPanelRef}
           elements={elements}
-          safeArea={safeArea}
-          scale={scale}
           selectedId={selectedId}
           selectedMonitor={selectedMonitor}
           showSafeArea={showSafeArea}
-          stageHeight={stageHeight}
-          stageWidth={stageWidth}
           onMoveElement={updateElementPosition}
           onSelect={setSelectedId}
           onShowSafeAreaChange={setShowSafeArea}

@@ -39,6 +39,8 @@ export function MonitorSection({ collapsedSections, monitors, normalizedInset, s
           <dd>{formatFloat(selectedMonitor.scaleFactor)}</dd>
           <dt>16:9 Inset</dt>
           <dd>{formatFloat(normalizedInset)}</dd>
+          <dt>Root Scale</dt>
+          <dd>{selectedMonitor.height}px</dd>
         </dl>
       </div>
     </PropertySection>

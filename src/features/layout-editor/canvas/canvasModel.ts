@@ -15,20 +15,23 @@ export function worldRect(
   screenWidth: number,
   screenHeight: number,
 ): WorldRect {
+  const rootWidth = screenWidth;
+  const rootHeight = screenHeight;
+  const rootScale = screenHeight;
   const parent = element.parentId ? getElement(elements, element.parentId) : null;
   const parentRect = parent ? worldRect(parent, elements, screenWidth, screenHeight) : null;
   const anchorX = parentRect
     ? parentRect.x + element.fields.x.currentValue * parentRect.width
-    : element.fields.x.currentValue * screenWidth;
+    : element.fields.x.currentValue * rootWidth;
   const anchorY = parentRect
     ? parentRect.y + element.fields.y.currentValue * parentRect.height
-    : frameAnchorY(element.fields.y.currentValue, screenHeight);
+    : frameAnchorY(element.fields.y.currentValue, rootHeight);
   const width = parentRect
-    ? element.fields.width.currentValue * parentRect.width
-    : element.fields.width.currentValue * screenHeight;
+    ? element.fields.width.currentValue * parentRect.height
+    : element.fields.width.currentValue * rootScale;
   const height = parentRect
     ? element.fields.height.currentValue * parentRect.height
-    : element.fields.height.currentValue * screenHeight;
+    : element.fields.height.currentValue * rootScale;
 
   return {
     anchorX,
