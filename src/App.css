@@ -164,6 +164,69 @@ button:hover {
   line-height: 1.35;
 }
 
+.about-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  background: rgba(2, 6, 23, 0.62);
+}
+
+.about-dialog {
+  width: min(520px, calc(100vw - 32px));
+  border: 1px solid #334155;
+  border-radius: 8px;
+  background: #111827;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+}
+
+.about-header {
+  display: flex;
+  min-height: 46px;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #253044;
+  padding: 0 10px 0 14px;
+}
+
+.about-header h2 {
+  margin: 0;
+  color: #f8fafc;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.about-content {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 10px 14px;
+  margin: 0;
+  padding: 14px;
+  color: #cbd5e1;
+  font-size: 13px;
+}
+
+.about-content dt {
+  color: #94a3b8;
+}
+
+.about-content dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.about-content a {
+  color: #93c5fd;
+  text-decoration: none;
+}
+
+.about-content a:hover {
+  color: #bfdbfe;
+  text-decoration: underline;
+}
+
 .header-action {
   height: 32px;
   padding: 0 12px;
@@ -560,6 +623,14 @@ button:hover {
   background: #111827;
   box-shadow: 0 18px 45px rgba(0, 0, 0, 0.32);
   cursor: default;
+}
+
+.stage-shell.pan-ready {
+  cursor: grab;
+}
+
+.stage-shell.panning {
+  cursor: grabbing;
 }
 
 .stage-shell canvas {

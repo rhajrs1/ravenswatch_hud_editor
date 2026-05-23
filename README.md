@@ -100,4 +100,6 @@ npm run build
 
 ## License
 
-License information has not been added yet.
+MIT License.
+
+You are free to use, modify, and redistribute this project, but please keep the original copyright and license notice.

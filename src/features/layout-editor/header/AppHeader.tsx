@@ -1,4 +1,7 @@
+import { useState } from "react";
 import type { GameFolderState } from "../model/types";
+
+const REPOSITORY_URL = "https://github.com/rhajrs1/ravenswatch_hud_editor";
 
 type AppHeaderProps = {
   fileMenuOpen: boolean;
@@ -29,6 +32,8 @@ export function AppHeader({
   onResetDefaults,
   onSaveLayout,
 }: AppHeaderProps) {
+  const [aboutOpen, setAboutOpen] = useState(false);
+
   return (
     <header className="toolbar">
       {gameState?.found && (
@@ -54,6 +59,10 @@ export function AppHeader({
                     Saved file only. Unsaved editor changes are not backed up.
                     Restore overwrites the current saved file.
                   </p>
+                  <div className="menu-separator" />
+                  <button onClick={() => setAboutOpen(true)} type="button">
+                    About
+                  </button>
                 </div>
               )}
             </div>
@@ -77,6 +86,30 @@ export function AppHeader({
             <button className="header-action primary" disabled={!hasUnsavedChanges} onClick={onSaveLayout} type="button">
               Save
             </button>
+          </div>
+        </div>
+      )}
+      {aboutOpen && (
+        <div className="about-backdrop" onMouseDown={() => setAboutOpen(false)}>
+          <div className="about-dialog" onMouseDown={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="about-title">
+            <div className="about-header">
+              <h2 id="about-title">Ravenswatch HUD Layout Editor</h2>
+              <button aria-label="Close About" className="icon-action" onClick={() => setAboutOpen(false)} type="button">
+                x
+              </button>
+            </div>
+            <dl className="about-content">
+              <dt>Repository</dt>
+              <dd>
+                <a href={REPOSITORY_URL} target="_blank" rel="noreferrer">
+                  {REPOSITORY_URL}
+                </a>
+              </dd>
+              <dt>Copyright</dt>
+              <dd>Copyright (c) 2026 rhajrs</dd>
+              <dt>License</dt>
+              <dd>MIT License</dd>
+            </dl>
           </div>
         </div>
       )}

@@ -67,6 +67,8 @@ export function LayoutCanvas({ canRedo, canUndo, elements, selectedId, selectedM
   const [viewportSize, setViewportSize] = useState({ width: 640, height: 360 });
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState<Point>(() => centeredPan(640, 360, selectedMonitor, fitScaleForViewport(640, 360, selectedMonitor)));
+  const [spacePressed, setSpacePressed] = useState(false);
+  const [isPanning, setIsPanning] = useState(false);
   const monitorKey = `${selectedMonitor.id}:${selectedMonitor.width}x${selectedMonitor.height}`;
 
   const fitScale = useMemo(
@@ -126,6 +128,7 @@ export function LayoutCanvas({ canRedo, canUndo, elements, selectedId, selectedM
     isPanningRef.current = false;
     lastPanPointerRef.current = null;
     elementDragRef.current = null;
+    setIsPanning(false);
     setZoom(1);
     setPan(centeredPan(viewportSize.width, viewportSize.height, selectedMonitor, nextFitScale));
   }, [monitorKey]);
@@ -134,13 +137,16 @@ export function LayoutCanvas({ canRedo, canUndo, elements, selectedId, selectedM
     function handleKeyDown(event: KeyboardEvent) {
       if (event.code === "Space") {
         spacePressedRef.current = true;
+        setSpacePressed(true);
       }
     }
 
     function handleKeyUp(event: KeyboardEvent) {
       if (event.code === "Space") {
         spacePressedRef.current = false;
+        setSpacePressed(false);
         isPanningRef.current = false;
+        setIsPanning(false);
         lastPanPointerRef.current = null;
       }
     }
@@ -254,6 +260,7 @@ export function LayoutCanvas({ canRedo, canUndo, elements, selectedId, selectedM
 
     event.evt.preventDefault();
     isPanningRef.current = true;
+    setIsPanning(true);
     lastPanPointerRef.current = pointer;
   }
 
@@ -299,6 +306,7 @@ export function LayoutCanvas({ canRedo, canUndo, elements, selectedId, selectedM
       onCommitElementMove(activeElementDrag.id, activeElementDrag.start, activeElementDrag.latest);
     }
     isPanningRef.current = false;
+    setIsPanning(false);
     lastPanPointerRef.current = null;
     elementDragRef.current = null;
   }
@@ -326,7 +334,7 @@ export function LayoutCanvas({ canRedo, canUndo, elements, selectedId, selectedM
           </label>
         </div>
       </div>
-      <div className="stage-shell" ref={stageShellRef}>
+      <div className={["stage-shell", spacePressed ? "pan-ready" : "", isPanning ? "panning" : ""].join(" ")} ref={stageShellRef}>
         <Stage
           width={viewportSize.width}
           height={viewportSize.height}
