@@ -62,6 +62,7 @@ type LayoutField = {
 };
 
 type ElementId =
+  | "left-frame"
   | "hud-left"
   | "status-elements"
   | "skill-mo-navzone"
@@ -76,6 +77,7 @@ type ElementId =
   | "crit-damage-frame"
   | "exp-frame"
   | "life-frame"
+  | "center-frame"
   | "hud-center"
   | "ability-frame"
   | "abilities-banner-frame"
@@ -83,6 +85,7 @@ type ElementId =
   | "abilities-layout"
   | "abilities-layout-top"
   | "portrait-frame"
+  | "right-frame"
   | "hud-right"
   | "time-elements"
   | "minimap-frame"
@@ -158,8 +161,18 @@ const elementFields = (
 
 const initialElements: LayoutElement[] = [
   {
-    id: "hud-left",
+    id: "left-frame",
     parentId: null,
+    name: "LEFT_FRAME",
+    kind: "Frame",
+    marker: "0x001029AA",
+    fields: elementFields({}, { x: 0.01, y: 0.5, width: 0.97, height: 0.97, pivotX: 0, pivotY: 0.5 }),
+    color: "#86efac",
+    visible: true,
+  },
+  {
+    id: "hud-left",
+    parentId: "left-frame",
     name: "HUD_Frame_Left",
     kind: "Frame",
     marker: "0x00103C9D",
@@ -179,7 +192,7 @@ const initialElements: LayoutElement[] = [
   },
   {
     id: "skill-mo-navzone",
-    parentId: "status-elements",
+    parentId: "hud-left",
     name: "Skill & MO NavZone",
     kind: "Frame",
     marker: "0x00103D58",
@@ -219,7 +232,7 @@ const initialElements: LayoutElement[] = [
   },
   {
     id: "bonus-frame",
-    parentId: "status-elements",
+    parentId: "hud-left",
     name: "Bonus_Frame",
     kind: "Frame",
     marker: "0x00103DBB",
@@ -298,8 +311,18 @@ const initialElements: LayoutElement[] = [
     visible: true,
   },
   {
-    id: "hud-center",
+    id: "center-frame",
     parentId: null,
+    name: "CENTER FRAME",
+    kind: "Frame",
+    marker: "0x00102949",
+    fields: elementFields({}, { x: 0.5, y: 0.5, width: 1.703, height: 0.97, pivotX: 0.5, pivotY: 0.5 }),
+    color: "#fde68a",
+    visible: true,
+  },
+  {
+    id: "hud-center",
+    parentId: "center-frame",
     name: "HUD_Frame_Center",
     kind: "Frame",
     marker: "0x0010655F",
@@ -329,7 +352,7 @@ const initialElements: LayoutElement[] = [
   },
   {
     id: "abilities-layout-back",
-    parentId: "abilities-banner-frame",
+    parentId: "ability-frame",
     name: "Abilities_Layout_Back",
     kind: "Frame",
     marker: "0x001067AA",
@@ -339,7 +362,7 @@ const initialElements: LayoutElement[] = [
   },
   {
     id: "abilities-layout",
-    parentId: "abilities-banner-frame",
+    parentId: "ability-frame",
     name: "Abilities_Layout",
     kind: "Frame",
     marker: "0x0010681C",
@@ -349,7 +372,7 @@ const initialElements: LayoutElement[] = [
   },
   {
     id: "abilities-layout-top",
-    parentId: "abilities-banner-frame",
+    parentId: "ability-frame",
     name: "Abilities_Layout_Top",
     kind: "Frame",
     marker: "0x00106889",
@@ -368,8 +391,18 @@ const initialElements: LayoutElement[] = [
     visible: true,
   },
   {
-    id: "hud-right",
+    id: "right-frame",
     parentId: null,
+    name: "RIGHT FRAME",
+    kind: "Frame",
+    marker: "0x001028F5",
+    fields: elementFields({}, { x: 0.99, y: 0.5, width: 0.97, height: 0.97, pivotX: 1, pivotY: 0.5 }),
+    color: "#bfdbfe",
+    visible: true,
+  },
+  {
+    id: "hud-right",
+    parentId: "right-frame",
     name: "HUD_Frame_Right",
     kind: "Frame",
     marker: "0x001098B7",
@@ -459,7 +492,7 @@ const initialElements: LayoutElement[] = [
   },
   {
     id: "modifier-frame-size-ref",
-    parentId: "difficulty-modifiers-frame",
+    parentId: "modifiers-layout",
     name: "Modifier Frame Size Ref",
     kind: "Frame",
     marker: "0x0010AC6D",
@@ -592,16 +625,12 @@ function mergeElementSchema(current: LayoutElement[]) {
   return changed ? next : current;
 }
 
-function frameAnchorX(value: number, screenWidth: number, screenHeight: number) {
-  return screenWidth / 2 + (value - 0.5) * screenHeight;
-}
-
 function frameAnchorY(value: number, screenHeight: number) {
   return value * screenHeight;
 }
 
-function normalizedFromAnchorX(x: number, screenWidth: number, screenHeight: number) {
-  return 0.5 + (x - screenWidth / 2) / screenHeight;
+function normalizedFromRootAnchorX(x: number, screenWidth: number) {
+  return x / screenWidth;
 }
 
 type WorldRect = {
@@ -653,13 +682,13 @@ function worldRect(
   const parentRect = parent ? worldRect(parent, elements, screenWidth, screenHeight) : null;
   const anchorX = parentRect
     ? parentRect.x + element.fields.x.currentValue * parentRect.width
-    : frameAnchorX(element.fields.x.currentValue, screenWidth, screenHeight);
+    : element.fields.x.currentValue * screenWidth;
   const anchorY = parentRect
     ? parentRect.y + element.fields.y.currentValue * parentRect.height
     : frameAnchorY(element.fields.y.currentValue, screenHeight);
   const width = parentRect
-    ? element.fields.width.currentValue * parentRect.height
-    : element.fields.width.currentValue * screenWidth;
+    ? element.fields.width.currentValue * parentRect.width
+    : element.fields.width.currentValue * screenHeight;
   const height = parentRect
     ? element.fields.height.currentValue * parentRect.height
     : element.fields.height.currentValue * screenHeight;
@@ -902,7 +931,7 @@ function App() {
         const worldY = stageY / scale;
         const nextX = parentRect
           ? (worldX - parentRect.x) / parentRect.width
-          : normalizedFromAnchorX(worldX, selectedMonitor.width, selectedMonitor.height);
+          : normalizedFromRootAnchorX(worldX, selectedMonitor.width);
         const nextY = parentRect ? (worldY - parentRect.y) / parentRect.height : worldY / selectedMonitor.height;
 
         return {
