@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import type { GameFolderState } from "../model/types";
 
 const REPOSITORY_URL = "https://github.com/rhajrs1/ravenswatch_hud_editor";
@@ -33,6 +34,18 @@ export function AppHeader({
   onSaveLayout,
 }: AppHeaderProps) {
   const [aboutOpen, setAboutOpen] = useState(false);
+  const [appVersion, setAppVersion] = useState<string | null>(null);
+
+  function openAbout() {
+    setAboutOpen(true);
+    if (appVersion !== null) {
+      return;
+    }
+
+    invoke<string>("app_version")
+      .then(setAppVersion)
+      .catch(() => setAppVersion("Unknown"));
+  }
 
   return (
     <header className="toolbar">
@@ -60,7 +73,7 @@ export function AppHeader({
                     Restore overwrites the current saved file.
                   </p>
                   <div className="menu-separator" />
-                  <button onClick={() => setAboutOpen(true)} type="button">
+                  <button onClick={openAbout} type="button">
                     About
                   </button>
                 </div>
@@ -99,6 +112,8 @@ export function AppHeader({
               </button>
             </div>
             <dl className="about-content">
+              <dt>Version</dt>
+              <dd>{appVersion ?? "Loading..."}</dd>
               <dt>Repository</dt>
               <dd>
                 <a href={REPOSITORY_URL} target="_blank" rel="noreferrer">
