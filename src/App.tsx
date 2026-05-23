@@ -475,15 +475,12 @@ function App() {
   return (
     <main className="app" ref={shellRef}>
       <AppHeader
-        canRedo={redoStack.length > 0}
-        canUndo={undoStack.length > 0}
         fileMenuOpen={fileMenuOpen}
         gameState={gameState}
         presetMenuOpen={presetMenuOpen}
         onApplySafeAreaPreset={applySafeAreaPreset}
         onBackupSavedFile={backupSavedFile}
         onBrowseGameFolder={browseGameFolder}
-        onRedo={redoLayoutChange}
         onRestoreFile={restoreFile}
         onResetDefaults={resetToDefaults}
         onSaveLayout={saveLayout}
@@ -495,7 +492,6 @@ function App() {
           setPresetMenuOpen((open) => !open);
           setFileMenuOpen(false);
         }}
-        onUndo={undoLayoutChange}
       />
 
       {gameState === null && gameStateError === null ? (
@@ -528,14 +524,18 @@ function App() {
         </aside>
 
         <LayoutCanvas
+          canRedo={redoStack.length > 0}
+          canUndo={undoStack.length > 0}
           elements={elements}
           selectedId={selectedId}
           selectedMonitor={selectedMonitor}
           showSafeArea={showSafeArea}
           onCommitElementMove={commitElementMove}
           onMoveElement={updateElementPosition}
+          onRedo={redoLayoutChange}
           onSelect={setSelectedId}
           onShowSafeAreaChange={setShowSafeArea}
+          onUndo={undoLayoutChange}
         />
 
         <PropertyPanel

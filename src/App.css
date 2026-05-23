@@ -76,51 +76,6 @@ button:hover {
   padding: 14px 18px;
 }
 
-.game-folder-bar {
-  position: relative;
-  display: flex;
-  width: 32px;
-  height: 32px;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  background: transparent;
-  padding: 0;
-}
-
-.game-folder-bar:hover {
-  border-color: #334155;
-  background: #111827;
-}
-
-.game-folder-icon {
-  flex: 0 0 auto;
-  color: #94a3b8;
-}
-
-.game-folder-tooltip {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 0;
-  z-index: 20;
-  display: none;
-  max-width: min(760px, 70vw);
-  border: 1px solid #334155;
-  border-radius: 6px;
-  background: #111827;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.36);
-  color: #e5e7eb;
-  font-family: "Cascadia Mono", Consolas, monospace;
-  font-size: 12px;
-  padding: 7px 9px;
-  white-space: nowrap;
-}
-
-.game-folder-bar:hover .game-folder-tooltip {
-  display: block;
-}
-
 .header-content {
   display: flex;
   width: 100%;
@@ -196,6 +151,12 @@ button:hover {
   background: #30151f;
 }
 
+.menu-separator {
+  height: 1px;
+  margin: 3px 4px;
+  background: #253044;
+}
+
 .file-popover p {
   margin: 4px 6px 3px;
   color: #f59e0b;
@@ -208,24 +169,32 @@ button:hover {
   padding: 0 12px;
 }
 
-.header-icon-action {
+.icon-action {
   display: grid;
   width: 32px;
   height: 32px;
   place-items: center;
+  border-color: #334155;
+  background: #111827;
   padding: 0;
   color: #cbd5e1;
 }
 
-.header-icon-action:disabled {
-  border-color: transparent;
-  background: transparent;
+.icon-action:hover {
+  border-color: #64748b;
+  background: #1e293b;
+}
+
+.icon-action:disabled {
+  border-color: #1f2937;
+  background: #0f172a;
   color: #475569;
   cursor: default;
 }
 
-.header-icon-action:disabled:hover {
-  border-color: transparent;
+.icon-action:disabled:hover {
+  border-color: #1f2937;
+  background: #0f172a;
 }
 
 .header-action.primary {
@@ -485,6 +454,7 @@ button:hover {
 }
 
 .layout-header {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -493,6 +463,15 @@ button:hover {
   color: #f8fafc;
   font-size: 13px;
   font-weight: 650;
+}
+
+.layout-history-actions {
+  position: absolute;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transform: translateX(-50%);
 }
 
 .layout-actions {

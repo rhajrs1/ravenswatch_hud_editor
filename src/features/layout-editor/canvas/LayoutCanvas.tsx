@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { IconArrowBackUp, IconArrowForwardUp } from "@tabler/icons-react";
 import { Circle, Group, Layer, Line, Rect, Stage, Text } from "react-konva";
 import { getElement, isEffectivelyVisible } from "../element-tree/elementTreeModel";
 import type { ElementId, LayoutElement, MonitorInfo } from "../model/types";
@@ -18,14 +19,18 @@ function shortLabel(name: string) {
 }
 
 type LayoutCanvasProps = {
+  canRedo: boolean;
+  canUndo: boolean;
   elements: LayoutElement[];
   selectedId: ElementId;
   selectedMonitor: MonitorInfo;
   showSafeArea: boolean;
   onMoveElement: (id: ElementId, x: number, y: number) => void;
   onCommitElementMove: (id: ElementId, before: Point, after: Point) => void;
+  onRedo: () => void;
   onSelect: (id: ElementId) => void;
   onShowSafeAreaChange: (show: boolean) => void;
+  onUndo: () => void;
 };
 
 type Point = {
@@ -50,7 +55,7 @@ function centeredPan(width: number, height: number, monitor: MonitorInfo, scale:
   };
 }
 
-export function LayoutCanvas({ elements, selectedId, selectedMonitor, showSafeArea, onMoveElement, onCommitElementMove, onSelect, onShowSafeAreaChange }: LayoutCanvasProps) {
+export function LayoutCanvas({ canRedo, canUndo, elements, selectedId, selectedMonitor, showSafeArea, onMoveElement, onCommitElementMove, onRedo, onSelect, onShowSafeAreaChange, onUndo }: LayoutCanvasProps) {
   const stageShellRef = useRef<HTMLDivElement>(null);
   const isPanningRef = useRef(false);
   const lastPanPointerRef = useRef<Point | null>(null);
@@ -275,6 +280,14 @@ export function LayoutCanvas({ elements, selectedId, selectedMonitor, showSafeAr
     <section className="canvas-panel">
       <div className="layout-header">
         <span>Layout</span>
+        <div className="layout-history-actions">
+          <button aria-label="Undo" className="icon-action" disabled={!canUndo} onClick={onUndo} title="Undo (Ctrl+Z)" type="button">
+            <IconArrowBackUp size={17} stroke={2} />
+          </button>
+          <button aria-label="Redo" className="icon-action" disabled={!canRedo} onClick={onRedo} title="Redo (Ctrl+Y)" type="button">
+            <IconArrowForwardUp size={17} stroke={2} />
+          </button>
+        </div>
         <div className="layout-actions">
           <span className="zoom-readout">{Math.round(zoom * 100)}%</span>
           <button className="layout-tool-button" onClick={resetView} type="button">
