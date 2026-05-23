@@ -345,12 +345,12 @@ export function LayoutCanvas({ canRedo, canUndo, elements, selectedId, selectedM
           onWheel={handleWheel}
         >
           <Layer>
-            <Rect name="canvas-background" width={viewportSize.width} height={viewportSize.height} fill="#0b1120" />
+            <Rect name="canvas-background" width={viewportSize.width} height={viewportSize.height} fill="#0d0d0d" />
             <Group x={pan.x} y={pan.y} scaleX={displayScale} scaleY={displayScale}>
-              <Rect name="monitor-background" x={0} y={0} width={selectedMonitor.width} height={selectedMonitor.height} fill="#111827" />
-              <Rect x={0} y={0} width={selectedMonitor.width} height={selectedMonitor.height} stroke="#e5e7eb" strokeWidth={1 / displayScale} opacity={0.72} />
-              {showSafeArea && <Rect x={safeLeft} y={0} width={safeWidth} height={selectedMonitor.height} stroke="#93c5fd" strokeWidth={1 / displayScale} dash={[8 / displayScale, 5 / displayScale]} opacity={0.95} />}
-              <Line points={[selectedMonitor.width / 2, 0, selectedMonitor.width / 2, selectedMonitor.height]} stroke="#64748b" strokeWidth={1 / displayScale} dash={[6 / displayScale, 6 / displayScale]} />
+              <Rect name="monitor-background" x={0} y={0} width={selectedMonitor.width} height={selectedMonitor.height} fill="#171717" />
+              <Rect x={0} y={0} width={selectedMonitor.width} height={selectedMonitor.height} stroke="#ffffff" strokeWidth={1 / displayScale} opacity={0.64} />
+              {showSafeArea && <Rect x={safeLeft} y={0} width={safeWidth} height={selectedMonitor.height} stroke="#f97316" strokeWidth={1 / displayScale} dash={[8 / displayScale, 5 / displayScale]} opacity={0.95} />}
+              <Line points={[selectedMonitor.width / 2, 0, selectedMonitor.width / 2, selectedMonitor.height]} stroke="#5a5a5a" strokeWidth={1 / displayScale} dash={[6 / displayScale, 6 / displayScale]} />
               {elements.filter((element) => isEffectivelyVisible(element, elements)).map((element) => {
                 const rect = worldRect(element, elements, selectedMonitor.width, selectedMonitor.height);
                 const localX = rect.x - rect.anchorX;
@@ -384,7 +384,7 @@ export function LayoutCanvas({ canRedo, canUndo, elements, selectedId, selectedM
                       onMouseDown={(event) => handleElementMouseDown(element.id, event)}
                       onTap={() => onSelect(element.id)}
                     />
-                    <Text x={16 / displayScale} y={-26 / displayScale} fill="#f8fafc" fontSize={14 / displayScale} text={shortLabel(element.name)} listening={false} />
+                    <Text x={16 / displayScale} y={-26 / displayScale} fill="#ffffff" fontSize={14 / displayScale} text={shortLabel(element.name)} listening={false} />
                   </Group>
                 );
               })}
