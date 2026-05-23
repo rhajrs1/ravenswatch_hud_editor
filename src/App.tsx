@@ -65,18 +65,36 @@ type ElementId =
   | "hud-left"
   | "status-elements"
   | "skill-mo-navzone"
+  | "skill-frame"
+  | "skills-items-separator-frame"
+  | "magical-objects-frame"
   | "bonus-frame"
+  | "vitality-frame"
+  | "damage-bonus-frame"
+  | "armour-frame"
+  | "crit-chance-frame"
+  | "crit-damage-frame"
   | "exp-frame"
   | "life-frame"
   | "hud-center"
   | "ability-frame"
   | "abilities-banner-frame"
+  | "abilities-layout-back"
+  | "abilities-layout"
+  | "abilities-layout-top"
   | "portrait-frame"
   | "hud-right"
   | "time-elements"
   | "minimap-frame"
+  | "minimap-picture"
+  | "minimap-overlay-picture"
+  | "overtime-text-minimap-frame"
   | "difficulty-modifiers-frame"
+  | "difficulty-frame"
+  | "modifiers-layout"
+  | "modifier-frame-size-ref"
   | "peers-hero-miniatures-frame"
+  | "social-options-menu"
   | "consumables-frame"
   | "dream-shards-frame"
   | "reroll-frame"
@@ -161,7 +179,7 @@ const initialElements: LayoutElement[] = [
   },
   {
     id: "skill-mo-navzone",
-    parentId: "hud-left",
+    parentId: "status-elements",
     name: "Skill & MO NavZone",
     kind: "Frame",
     marker: "0x00103D58",
@@ -170,8 +188,38 @@ const initialElements: LayoutElement[] = [
     visible: true,
   },
   {
+    id: "skill-frame",
+    parentId: "skill-mo-navzone",
+    name: "Skill_Frame",
+    kind: "Frame",
+    marker: "0x00105389",
+    fields: elementFields({ x: "0x00105397" }, { x: 0.5, y: 1, width: 0.065741, height: 0.362963, pivotX: 0.5, pivotY: 1 }),
+    color: "#2dd4bf",
+    visible: true,
+  },
+  {
+    id: "skills-items-separator-frame",
+    parentId: "skill-mo-navzone",
+    name: "Skills-Items_Separator_Frame",
+    kind: "Frame",
+    marker: "0x001053D9",
+    fields: elementFields({ x: "0x001053E7" }, { x: 0.5, y: 0.533, width: 0.064815, height: 0.005556, pivotX: 0.5, pivotY: 0.5 }),
+    color: "#14b8a6",
+    visible: true,
+  },
+  {
+    id: "magical-objects-frame",
+    parentId: "skill-mo-navzone",
+    name: "Magical_Objects_Frame",
+    kind: "Frame",
+    marker: "0x00105476",
+    fields: elementFields({ x: "0x00105484" }, { x: 0.5, y: 0.526, width: 0.065741, height: 0.362963, pivotX: 0.5, pivotY: 1 }),
+    color: "#0d9488",
+    visible: true,
+  },
+  {
     id: "bonus-frame",
-    parentId: "hud-left",
+    parentId: "status-elements",
     name: "Bonus_Frame",
     kind: "Frame",
     marker: "0x00103DBB",
@@ -180,8 +228,58 @@ const initialElements: LayoutElement[] = [
     visible: true,
   },
   {
+    id: "vitality-frame",
+    parentId: "bonus-frame",
+    name: "Vitality_Frame",
+    kind: "Frame",
+    marker: "0x00103E1F",
+    fields: elementFields({ x: "0x00103E2D" }, { x: 0.1, y: 0.5, width: 0.0416667, height: 0.0416667, pivotX: 0.5, pivotY: 0.5 }),
+    color: "#22c55e",
+    visible: true,
+  },
+  {
+    id: "damage-bonus-frame",
+    parentId: "bonus-frame",
+    name: "Damage_Bonus_Frame",
+    kind: "Frame",
+    marker: "0x00103E8A",
+    fields: elementFields({ x: "0x00103E98" }, { x: 0.3, y: 0.5, width: 0.0416667, height: 0.0416667, pivotX: 0.5, pivotY: 0.5 }),
+    color: "#16a34a",
+    visible: true,
+  },
+  {
+    id: "armour-frame",
+    parentId: "bonus-frame",
+    name: "Armour_Frame",
+    kind: "Frame",
+    marker: "0x00103EF9",
+    fields: elementFields({ x: "0x00103F07" }, { x: 0.5, y: 0.5, width: 0.0416667, height: 0.0416667, pivotX: 0.5, pivotY: 0.5 }),
+    color: "#15803d",
+    visible: true,
+  },
+  {
+    id: "crit-chance-frame",
+    parentId: "bonus-frame",
+    name: "Crit_Chance_Frame",
+    kind: "Frame",
+    marker: "0x00103F62",
+    fields: elementFields({ x: "0x00103F70" }, { x: 0.7, y: 0.5, width: 0.0416667, height: 0.0416667, pivotX: 0.5, pivotY: 0.5 }),
+    color: "#166534",
+    visible: true,
+  },
+  {
+    id: "crit-damage-frame",
+    parentId: "bonus-frame",
+    name: "Crit_Damage_Frame",
+    kind: "Frame",
+    marker: "0x00103FCC",
+    fields: elementFields({ x: "0x00103FDA" }, { x: 0.9, y: 0.5, width: 0.0416667, height: 0.0416667, pivotX: 0.5, pivotY: 0.5 }),
+    color: "#14532d",
+    visible: true,
+  },
+  {
     id: "exp-frame",
-    parentId: "hud-left",
+    parentId: "status-elements",
     name: "Exp_Frame",
     kind: "Frame",
     marker: "0x00105584",
@@ -191,7 +289,7 @@ const initialElements: LayoutElement[] = [
   },
   {
     id: "life-frame",
-    parentId: "hud-left",
+    parentId: "status-elements",
     name: "Life_Frame",
     kind: "Frame",
     marker: "0x00105794",
@@ -221,7 +319,7 @@ const initialElements: LayoutElement[] = [
   },
   {
     id: "abilities-banner-frame",
-    parentId: "hud-center",
+    parentId: "ability-frame",
     name: "Abilities_Banner_Frame",
     kind: "Frame",
     marker: "0x001066E4",
@@ -230,8 +328,38 @@ const initialElements: LayoutElement[] = [
     visible: true,
   },
   {
+    id: "abilities-layout-back",
+    parentId: "abilities-banner-frame",
+    name: "Abilities_Layout_Back",
+    kind: "Frame",
+    marker: "0x001067AA",
+    fields: elementFields({ x: "0x001067B8" }, { x: 0.5, y: 0.3869276, width: 0.73, height: 0.83, pivotX: 0.415, pivotY: 0.5 }),
+    color: "#fbbf24",
+    visible: true,
+  },
+  {
+    id: "abilities-layout",
+    parentId: "abilities-banner-frame",
+    name: "Abilities_Layout",
+    kind: "Frame",
+    marker: "0x0010681C",
+    fields: elementFields({ x: "0x0010682A" }, { x: 0.5, y: 0.3869, width: 0.73, height: 0.83, pivotX: 0.415, pivotY: 0.5 }),
+    color: "#f59e0b",
+    visible: true,
+  },
+  {
+    id: "abilities-layout-top",
+    parentId: "abilities-banner-frame",
+    name: "Abilities_Layout_Top",
+    kind: "Frame",
+    marker: "0x00106889",
+    fields: elementFields({ x: "0x00106897" }, { x: 0.5, y: 0.3869276, width: 0.73, height: 0.83, pivotX: 0.415, pivotY: 0.5 }),
+    color: "#d97706",
+    visible: true,
+  },
+  {
     id: "portrait-frame",
-    parentId: "hud-center",
+    parentId: "ability-frame",
     name: "Portrait Frame",
     kind: "Frame",
     marker: "0x00106743",
@@ -270,6 +398,36 @@ const initialElements: LayoutElement[] = [
     visible: true,
   },
   {
+    id: "minimap-picture",
+    parentId: "minimap-frame",
+    name: "Minimap_Picture",
+    kind: "Frame",
+    marker: "0x0010AD87",
+    fields: elementFields({ x: "0x0010AD95" }, { x: 0.5, y: 0.5, width: 1, height: 1, pivotX: 0.5, pivotY: 0.5 }),
+    color: "#7dd3fc",
+    visible: true,
+  },
+  {
+    id: "minimap-overlay-picture",
+    parentId: "minimap-frame",
+    name: "Minimap_Overlay_Picture",
+    kind: "Frame",
+    marker: "0x0010AE52",
+    fields: elementFields({ x: "0x0010AE60" }, { x: 0.5, y: 0.5, width: 1, height: 1, pivotX: 0.5, pivotY: 0.5 }),
+    color: "#38bdf8",
+    visible: true,
+  },
+  {
+    id: "overtime-text-minimap-frame",
+    parentId: "minimap-frame",
+    name: "Overtime_Text_Minimap_Frame",
+    kind: "Frame",
+    marker: "0x0010AF0F",
+    fields: elementFields({ x: "0x0010AF1D" }, { x: 1, y: 0.820286, width: 0.16, height: 0.08, pivotX: 1, pivotY: 1 }),
+    color: "#0ea5e9",
+    visible: true,
+  },
+  {
     id: "difficulty-modifiers-frame",
     parentId: "hud-right",
     name: "Difficulty & Modifiers Frame",
@@ -280,6 +438,36 @@ const initialElements: LayoutElement[] = [
     visible: true,
   },
   {
+    id: "difficulty-frame",
+    parentId: "difficulty-modifiers-frame",
+    name: "Difficulty Frame",
+    kind: "Frame",
+    marker: "0x0010ABBB",
+    fields: elementFields({ x: "0x0010ABC9" }, { x: 0.95, y: 0.02, width: 0.0555556, height: 0.0555556, pivotX: 1, pivotY: 0 }),
+    color: "#60a5fa",
+    visible: true,
+  },
+  {
+    id: "modifiers-layout",
+    parentId: "difficulty-modifiers-frame",
+    name: "Modifiers Layout",
+    kind: "Frame",
+    marker: "0x0010AC14",
+    fields: elementFields({ x: "0x0010AC22" }, { x: 0.94, y: 0.175, width: 1, height: 0.55, pivotX: 1, pivotY: 0 }),
+    color: "#3b82f6",
+    visible: true,
+  },
+  {
+    id: "modifier-frame-size-ref",
+    parentId: "difficulty-modifiers-frame",
+    name: "Modifier Frame Size Ref",
+    kind: "Frame",
+    marker: "0x0010AC6D",
+    fields: elementFields({ x: "0x0010AC7B" }, { x: 1, y: 0, width: 1, height: 0.2, pivotX: 1, pivotY: 0 }),
+    color: "#2563eb",
+    visible: true,
+  },
+  {
     id: "peers-hero-miniatures-frame",
     parentId: "hud-right",
     name: "Peers_Hero_Miniatures_Frame",
@@ -287,6 +475,16 @@ const initialElements: LayoutElement[] = [
     marker: "0x00109A44",
     fields: elementFields({ x: "0x00109A52" }, { x: 1, y: 0.57, width: 0.32, height: 0.18, pivotX: 1.15, pivotY: 1 }),
     color: "#2563eb",
+    visible: true,
+  },
+  {
+    id: "social-options-menu",
+    parentId: "hud-right",
+    name: "Social_Options_Menu",
+    kind: "Frame",
+    marker: "0x00109AA8",
+    fields: elementFields({ x: "0x00109AB6" }, { x: 1, y: 0.585, width: 0.2, height: 0.2, pivotX: 1, pivotY: 0 }),
+    color: "#1d4ed8",
     visible: true,
   },
   {
@@ -301,7 +499,7 @@ const initialElements: LayoutElement[] = [
   },
   {
     id: "dream-shards-frame",
-    parentId: "hud-right",
+    parentId: "consumables-frame",
     name: "Dream_Shards_Frame",
     kind: "Frame",
     marker: "0x00109B66",
@@ -311,7 +509,7 @@ const initialElements: LayoutElement[] = [
   },
   {
     id: "reroll-frame",
-    parentId: "hud-right",
+    parentId: "consumables-frame",
     name: "Reroll_Frame",
     kind: "Frame",
     marker: "0x00109BD5",
@@ -321,7 +519,7 @@ const initialElements: LayoutElement[] = [
   },
   {
     id: "revive-frame",
-    parentId: "hud-right",
+    parentId: "consumables-frame",
     name: "Revive Frame",
     kind: "Frame",
     marker: "0x00109C3E",
@@ -331,7 +529,7 @@ const initialElements: LayoutElement[] = [
   },
   {
     id: "key-frame",
-    parentId: "hud-right",
+    parentId: "consumables-frame",
     name: "Key_Frame",
     kind: "Frame",
     marker: "0x00109C9F",
@@ -340,6 +538,59 @@ const initialElements: LayoutElement[] = [
     visible: true,
   },
 ];
+
+function mergeElementSchema(current: LayoutElement[]) {
+  let changed = current.length !== initialElements.length;
+  const currentById = new Map(current.map((element) => [element.id, element]));
+
+  const next = initialElements.map((schemaElement) => {
+    const currentElement = currentById.get(schemaElement.id);
+    if (!currentElement) {
+      changed = true;
+      return schemaElement;
+    }
+
+    if (
+      currentElement.parentId !== schemaElement.parentId ||
+      currentElement.name !== schemaElement.name ||
+      currentElement.marker !== schemaElement.marker ||
+      currentElement.color !== schemaElement.color
+    ) {
+      changed = true;
+    }
+
+    const fields = Object.fromEntries(
+      Object.entries(schemaElement.fields).map(([key, schemaField]) => {
+        const fieldKey = key as keyof LayoutElement["fields"];
+        const currentField = currentElement.fields[fieldKey];
+        if (
+          !currentField ||
+          currentField.offset !== schemaField.offset ||
+          currentField.defaultValue !== schemaField.defaultValue ||
+          currentField.writable !== schemaField.writable
+        ) {
+          changed = true;
+        }
+
+        return [
+          key,
+          {
+            ...schemaField,
+            currentValue: currentField?.currentValue ?? schemaField.currentValue,
+          },
+        ];
+      }),
+    ) as LayoutElement["fields"];
+
+    return {
+      ...schemaElement,
+      fields,
+      visible: currentElement.visible,
+    };
+  });
+
+  return changed ? next : current;
+}
 
 function frameAnchorX(value: number, screenWidth: number, screenHeight: number) {
   return screenWidth / 2 + (value - 0.5) * screenHeight;
@@ -455,6 +706,10 @@ function App() {
   const [presetMenuOpen, setPresetMenuOpen] = useState(false);
   const [gameState, setGameState] = useState<GameFolderState | null>(null);
   const [gameStateError, setGameStateError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setElements((current) => mergeElementSchema(current));
+  }, []);
 
   const selected = elements.find((element) => element.id === selectedId) ?? elements[0];
   const selectedMonitor =
