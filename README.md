@@ -18,6 +18,10 @@ I made this because playing Ravenswatch on an ultrawide monitor made the left an
 
 ![Custom Layout](docs/images/custom-layout.jpg)
 
+### Editor Screen
+
+![Editor Screen](docs/images/editor-screen.png)
+
 ## What This Tool Does
 
 Ravenswatch HUD Layout Editor lets you adjust selected HUD frames and elements visually instead of editing the cooked layout file by hand.
