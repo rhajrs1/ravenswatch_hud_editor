@@ -4,10 +4,14 @@ import type { GameFolderState } from "../model/types";
 type AppHeaderProps = {
   canRedo: boolean;
   canUndo: boolean;
+  fileMenuOpen: boolean;
   gameState: GameFolderState | null;
   presetMenuOpen: boolean;
+  onBackupSavedFile: () => void;
   onBrowseGameFolder: () => void;
   onRedo: () => void;
+  onRestoreFile: () => void;
+  onToggleFileMenu: () => void;
   onTogglePresetMenu: () => void;
   onUndo: () => void;
   onApplySafeAreaPreset: () => void;
@@ -18,10 +22,14 @@ type AppHeaderProps = {
 export function AppHeader({
   canRedo,
   canUndo,
+  fileMenuOpen,
   gameState,
   presetMenuOpen,
+  onBackupSavedFile,
   onBrowseGameFolder,
   onRedo,
+  onRestoreFile,
+  onToggleFileMenu,
   onTogglePresetMenu,
   onUndo,
   onApplySafeAreaPreset,
@@ -33,6 +41,25 @@ export function AppHeader({
       {gameState?.found && (
         <div className="header-content">
           <div className="header-left-actions">
+            <div className="file-menu">
+              <button className="header-action secondary" onClick={onToggleFileMenu} type="button">
+                File
+              </button>
+              {fileMenuOpen && (
+                <div className="file-popover">
+                  <button onClick={onBackupSavedFile} type="button">
+                    Backup Saved File
+                  </button>
+                  <button className="danger-menu-item" onClick={onRestoreFile} type="button">
+                    Restore File
+                  </button>
+                  <p>
+                    Saved file only. Unsaved editor changes are not backed up.
+                    Restore overwrites the current saved file.
+                  </p>
+                </div>
+              )}
+            </div>
             <button className="game-folder-bar" onClick={onBrowseGameFolder} type="button">
               <IconFolder className="game-folder-icon" size={18} stroke={2} />
               <span className="game-folder-tooltip">{gameState.gameDir}</span>

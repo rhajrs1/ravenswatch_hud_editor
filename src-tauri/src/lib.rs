@@ -206,6 +206,38 @@ fn save_layout_values(game_dir: String, patches: Vec<LayoutPatch>) -> Result<(),
 }
 
 #[tauri::command]
+fn backup_layout_file(game_dir: String, target_path: String) -> Result<(), String> {
+    let game_dir = PathBuf::from(game_dir);
+    if !is_valid_game_dir(&game_dir) {
+        return Err("The configured Ravenswatch game folder is not valid.".to_string());
+    }
+
+    let source = layout_path(&game_dir);
+    let target = PathBuf::from(target_path);
+    fs::copy(source, target)
+        .map(|_| ())
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn restore_layout_file(game_dir: String, backup_path: String) -> Result<(), String> {
+    let game_dir = PathBuf::from(game_dir);
+    if !is_valid_game_dir(&game_dir) {
+        return Err("The configured Ravenswatch game folder is not valid.".to_string());
+    }
+
+    let backup = PathBuf::from(backup_path);
+    if !backup.is_file() {
+        return Err("The selected backup file does not exist.".to_string());
+    }
+
+    let target = layout_path(&game_dir);
+    fs::copy(backup, target)
+        .map(|_| ())
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
 fn load_layout_values(
     game_dir: String,
     requests: Vec<LayoutReadRequest>,
@@ -288,7 +320,9 @@ pub fn run() {
             get_monitors,
             get_game_folder_state,
             set_game_folder,
+            backup_layout_file,
             load_layout_values,
+            restore_layout_file,
             save_layout_values
         ])
         .run(tauri::generate_context!())

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { open } from "@tauri-apps/plugin-dialog";
+import { confirm, open, save } from "@tauri-apps/plugin-dialog";
 import "./App.css";
 
 import { LayoutCanvas } from "./features/layout-editor/canvas/LayoutCanvas";
@@ -8,7 +8,7 @@ import { ElementTreeSection } from "./features/layout-editor/element-tree/Elemen
 import { AppHeader } from "./features/layout-editor/header/AppHeader";
 import { applyLayoutCommand, createLayoutCommand } from "./features/layout-editor/history/layoutHistoryModel";
 import type { LayoutCommand, LayoutFieldChange, LayoutFieldName } from "./features/layout-editor/history/layoutHistoryModel";
-import { parseHexOffset, readLayoutValues, saveLayoutValues } from "./features/layout-editor/model/persistence";
+import { backupLayoutFile, parseHexOffset, readLayoutValues, restoreLayoutFile, saveLayoutValues } from "./features/layout-editor/model/persistence";
 import { initialElements, mergeElementSchema } from "./features/layout-editor/model/schema";
 import type { ElementId, GameFolderState, LayoutElement, MonitorInfo, NativeMonitorInfo } from "./features/layout-editor/model/types";
 import { MonitorSection } from "./features/layout-editor/monitor/MonitorSection";
@@ -39,6 +39,7 @@ function App() {
   const [selectedMonitorId, setSelectedMonitorId] = useState(FALLBACK_MONITOR.id);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
   const [showSafeArea, setShowSafeArea] = useState(true);
+  const [fileMenuOpen, setFileMenuOpen] = useState(false);
   const [presetMenuOpen, setPresetMenuOpen] = useState(false);
   const [gameState, setGameState] = useState<GameFolderState | null>(null);
   const [gameStateError, setGameStateError] = useState<string | null>(null);
@@ -49,6 +50,34 @@ function App() {
     setElements((current) => mergeElementSchema(current));
   }, []);
 
+  async function reloadLayoutValuesFromDisk(gameDir: string) {
+    const values = await readLayoutValues(gameDir, initialElements);
+    const valueByOffset = new Map(values.map((value) => [value.offset, value.value]));
+
+    setElements((current) =>
+      mergeElementSchema(current).map((element) => ({
+        ...element,
+        fields: Object.fromEntries(
+          Object.entries(element.fields).map(([key, field]) => {
+            const offset = parseHexOffset(field.offset);
+            return [
+              key,
+              {
+                ...field,
+                currentValue:
+                  offset !== null && valueByOffset.has(offset)
+                    ? valueByOffset.get(offset)!
+                    : field.currentValue,
+              },
+            ];
+          }),
+        ) as LayoutElement["fields"],
+      })),
+    );
+    setUndoStack([]);
+    setRedoStack([]);
+  }
+
   useEffect(() => {
     if (!gameState?.found || !gameState.gameDir) {
       return;
@@ -58,35 +87,11 @@ function App() {
     const gameDir = gameState.gameDir;
 
     async function loadLayoutValues() {
-      const values = await readLayoutValues(gameDir, initialElements);
-      const valueByOffset = new Map(values.map((value) => [value.offset, value.value]));
-
       if (cancelled) {
         return;
       }
 
-      setElements((current) =>
-        mergeElementSchema(current).map((element) => ({
-          ...element,
-          fields: Object.fromEntries(
-            Object.entries(element.fields).map(([key, field]) => {
-              const offset = parseHexOffset(field.offset);
-              return [
-                key,
-                {
-                  ...field,
-                  currentValue:
-                    offset !== null && valueByOffset.has(offset)
-                      ? valueByOffset.get(offset)!
-                      : field.currentValue,
-                },
-              ];
-            }),
-          ) as LayoutElement["fields"],
-        })),
-      );
-      setUndoStack([]);
-      setRedoStack([]);
+      await reloadLayoutValuesFromDisk(gameDir);
     }
 
     loadLayoutValues().catch((error) => {
@@ -169,6 +174,73 @@ function App() {
       setGameState(null);
       setGameStateError(String(error));
     }
+  }
+
+  function backupFileName() {
+    const now = new Date();
+    const stamp = [
+      now.getFullYear(),
+      String(now.getMonth() + 1).padStart(2, "0"),
+      String(now.getDate()).padStart(2, "0"),
+      "-",
+      String(now.getHours()).padStart(2, "0"),
+      String(now.getMinutes()).padStart(2, "0"),
+      String(now.getSeconds()).padStart(2, "0"),
+    ].join("");
+    return `Ravenswatch-HUD-Layout-Backup-${stamp}.yqz`;
+  }
+
+  async function backupSavedFile() {
+    if (!gameState?.gameDir) {
+      return;
+    }
+
+    const targetPath = await save({
+      defaultPath: backupFileName(),
+      filters: [{ name: "Ravenswatch Layout", extensions: ["yqz"] }],
+      title: "Backup saved Ravenswatch layout file",
+    });
+
+    if (typeof targetPath !== "string") {
+      return;
+    }
+
+    await backupLayoutFile(gameState.gameDir, targetPath);
+    setFileMenuOpen(false);
+  }
+
+  async function restoreFile() {
+    if (!gameState?.gameDir) {
+      return;
+    }
+
+    const backupPath = await open({
+      filters: [{ name: "Ravenswatch Layout", extensions: ["yqz"] }],
+      multiple: false,
+      title: "Restore Ravenswatch layout file",
+    });
+
+    if (typeof backupPath !== "string") {
+      return;
+    }
+
+    const confirmed = await confirm(
+      "This will replace the current saved game layout file on disk.\nUnsaved editor changes will be discarded.",
+      {
+        kind: "warning",
+        okLabel: "Restore File",
+        cancelLabel: "Cancel",
+        title: "Restore selected backup?",
+      },
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    await restoreLayoutFile(gameState.gameDir, backupPath);
+    await reloadLayoutValuesFromDisk(gameState.gameDir);
+    setFileMenuOpen(false);
   }
 
   function resetToDefaults() {
@@ -405,14 +477,24 @@ function App() {
       <AppHeader
         canRedo={redoStack.length > 0}
         canUndo={undoStack.length > 0}
+        fileMenuOpen={fileMenuOpen}
         gameState={gameState}
         presetMenuOpen={presetMenuOpen}
         onApplySafeAreaPreset={applySafeAreaPreset}
+        onBackupSavedFile={backupSavedFile}
         onBrowseGameFolder={browseGameFolder}
         onRedo={redoLayoutChange}
+        onRestoreFile={restoreFile}
         onResetDefaults={resetToDefaults}
         onSaveLayout={saveLayout}
-        onTogglePresetMenu={() => setPresetMenuOpen((open) => !open)}
+        onToggleFileMenu={() => {
+          setFileMenuOpen((open) => !open);
+          setPresetMenuOpen(false);
+        }}
+        onTogglePresetMenu={() => {
+          setPresetMenuOpen((open) => !open);
+          setFileMenuOpen(false);
+        }}
         onUndo={undoLayoutChange}
       />
 

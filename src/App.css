@@ -143,17 +143,17 @@ button:hover {
   gap: 8px;
 }
 
+.file-menu,
 .preset-menu {
   position: relative;
 }
 
+.file-popover,
 .preset-popover {
   position: absolute;
   top: calc(100% + 6px);
-  right: 0;
   z-index: 10;
   display: grid;
-  min-width: 180px;
   border: 1px solid #334155;
   border-radius: 6px;
   background: #111827;
@@ -161,6 +161,18 @@ button:hover {
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.36);
 }
 
+.file-popover {
+  left: 0;
+  min-width: 248px;
+  gap: 2px;
+}
+
+.preset-popover {
+  right: 0;
+  min-width: 180px;
+}
+
+.file-popover button,
 .preset-popover button {
   min-height: 30px;
   border-color: transparent;
@@ -169,9 +181,26 @@ button:hover {
   text-align: left;
 }
 
+.file-popover button:hover,
 .preset-popover button:hover {
   border-color: #334155;
   background: #1e293b;
+}
+
+.file-popover .danger-menu-item {
+  color: #fecaca;
+}
+
+.file-popover .danger-menu-item:hover {
+  border-color: #7f1d1d;
+  background: #30151f;
+}
+
+.file-popover p {
+  margin: 4px 6px 3px;
+  color: #f59e0b;
+  font-size: 12px;
+  line-height: 1.35;
 }
 
 .header-action {

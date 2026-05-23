@@ -43,3 +43,11 @@ export async function saveLayoutValues(gameDir: string, elements: LayoutElement[
 
   await invoke("save_layout_values", { gameDir, patches });
 }
+
+export async function backupLayoutFile(gameDir: string, targetPath: string) {
+  await invoke("backup_layout_file", { gameDir, targetPath });
+}
+
+export async function restoreLayoutFile(gameDir: string, backupPath: string) {
+  await invoke("restore_layout_file", { gameDir, backupPath });
+}
