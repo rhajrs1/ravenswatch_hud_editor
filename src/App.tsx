@@ -1,7 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
-import { IconChevronDown, IconChevronRight, IconFolder } from "@tabler/icons-react";
+import {
+  IconChevronDown,
+  IconChevronRight,
+  IconEye,
+  IconEyeOff,
+  IconFolder,
+} from "@tabler/icons-react";
 import { Group, Layer, Line, Rect, Stage, Text } from "react-konva";
 import "./App.css";
 
@@ -54,8 +61,31 @@ type LayoutField = {
   writable: boolean;
 };
 
+type ElementId =
+  | "hud-left"
+  | "status-elements"
+  | "skill-mo-navzone"
+  | "bonus-frame"
+  | "exp-frame"
+  | "life-frame"
+  | "hud-center"
+  | "ability-frame"
+  | "abilities-banner-frame"
+  | "portrait-frame"
+  | "hud-right"
+  | "time-elements"
+  | "minimap-frame"
+  | "difficulty-modifiers-frame"
+  | "peers-hero-miniatures-frame"
+  | "consumables-frame"
+  | "dream-shards-frame"
+  | "reroll-frame"
+  | "revive-frame"
+  | "key-frame";
+
 type LayoutElement = {
-  id: "left" | "right" | "center";
+  id: ElementId;
+  parentId: ElementId | null;
   name: string;
   kind: "Frame";
   marker: string;
@@ -68,6 +98,7 @@ type LayoutElement = {
     pivotY: LayoutField;
   };
   color: string;
+  visible: boolean;
 };
 
 type LayoutPatch = {
@@ -87,39 +118,226 @@ const field = (
   writable,
 });
 
-const defaultFrameFields = (xOffset: string | null, currentX = 0.5): LayoutElement["fields"] => ({
-  x: field(xOffset, 0.5, currentX, Boolean(xOffset)),
-  y: field(null, 0.5, 0.5, false),
-  width: field(null, 1, 1, false),
-  height: field(null, 1, 1, false),
-  pivotX: field(null, 0.5, 0.5, false),
-  pivotY: field(null, 0.5, 0.5, false),
+const elementFields = (
+  offsets: Partial<Record<keyof LayoutElement["fields"], string | null>>,
+  defaults: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    pivotX: number;
+    pivotY: number;
+  },
+  currentX = defaults.x,
+): LayoutElement["fields"] => ({
+  x: field(offsets.x ?? null, defaults.x, currentX, Boolean(offsets.x)),
+  y: field(offsets.y ?? null, defaults.y, defaults.y, Boolean(offsets.y)),
+  width: field(offsets.width ?? null, defaults.width, defaults.width, Boolean(offsets.width)),
+  height: field(offsets.height ?? null, defaults.height, defaults.height, Boolean(offsets.height)),
+  pivotX: field(offsets.pivotX ?? null, defaults.pivotX, defaults.pivotX, Boolean(offsets.pivotX)),
+  pivotY: field(offsets.pivotY ?? null, defaults.pivotY, defaults.pivotY, Boolean(offsets.pivotY)),
 });
 
 const initialElements: LayoutElement[] = [
   {
-    id: "left",
+    id: "hud-left",
+    parentId: null,
     name: "HUD_Frame_Left",
     kind: "Frame",
     marker: "0x00103C9D",
-    fields: defaultFrameFields("0x00103CAB", 1.3888889),
+    fields: elementFields({ x: "0x00103CAB" }, { x: 0.5, y: 0.5, width: 1, height: 1, pivotX: 0.5, pivotY: 0.5 }, 1.3888889),
     color: "#31c48d",
+    visible: true,
   },
   {
-    id: "center",
+    id: "status-elements",
+    parentId: "hud-left",
+    name: "Status_Elements",
+    kind: "Frame",
+    marker: "0x00103CFC",
+    fields: elementFields({ x: "0x00103D0A" }, { x: 0, y: 1, width: 0.33, height: 0.1, pivotX: 0, pivotY: 0.83 }),
+    color: "#6ee7b7",
+    visible: true,
+  },
+  {
+    id: "skill-mo-navzone",
+    parentId: "hud-left",
+    name: "Skill & MO NavZone",
+    kind: "Frame",
+    marker: "0x00103D58",
+    fields: elementFields({ x: "0x00103D66" }, { x: 0, y: 0.5, width: 0.16, height: 0.813, pivotX: 0.2885, pivotY: 0.5 }),
+    color: "#34d399",
+    visible: true,
+  },
+  {
+    id: "bonus-frame",
+    parentId: "hud-left",
+    name: "Bonus_Frame",
+    kind: "Frame",
+    marker: "0x00103DBB",
+    fields: elementFields({ x: "0x00103DC9" }, { x: 0.33, y: 1, width: 0.2083333, height: 0.0462963, pivotX: 0, pivotY: 1 }),
+    color: "#10b981",
+    visible: true,
+  },
+  {
+    id: "exp-frame",
+    parentId: "hud-left",
+    name: "Exp_Frame",
+    kind: "Frame",
+    marker: "0x00105584",
+    fields: elementFields({ x: "0x00105592" }, { x: 0, y: 1, width: 0, height: 0.1018519, pivotX: 0, pivotY: 1 }),
+    color: "#059669",
+    visible: true,
+  },
+  {
+    id: "life-frame",
+    parentId: "hud-left",
+    name: "Life_Frame",
+    kind: "Frame",
+    marker: "0x00105794",
+    fields: elementFields({ x: "0x001057A2" }, { x: 0.091, y: 0.055, width: 0.2592593, height: 0.0444444, pivotX: 0.12, pivotY: 0.2 }),
+    color: "#047857",
+    visible: true,
+  },
+  {
+    id: "hud-center",
+    parentId: null,
     name: "HUD_Frame_Center",
     kind: "Frame",
     marker: "0x0010655F",
-    fields: defaultFrameFields(null, 0.5),
+    fields: elementFields({ x: null }, { x: 0.5, y: 0.5, width: 1, height: 1, pivotX: 0.5, pivotY: 0.5 }),
     color: "#f59e0b",
+    visible: true,
   },
   {
-    id: "right",
+    id: "ability-frame",
+    parentId: "hud-center",
+    name: "Ability_Frame",
+    kind: "Frame",
+    marker: "0x001065B8",
+    fields: elementFields({ x: "0x001065C6" }, { x: 0.5, y: 1, width: 0.71, height: 0.085, pivotX: 0.5, pivotY: 1 }),
+    color: "#fbbf24",
+    visible: true,
+  },
+  {
+    id: "abilities-banner-frame",
+    parentId: "hud-center",
+    name: "Abilities_Banner_Frame",
+    kind: "Frame",
+    marker: "0x001066E4",
+    fields: elementFields({ x: "0x001066F2" }, { x: 0.5, y: 0.3869276, width: 1, height: 1, pivotX: 0.5, pivotY: 0.5 }),
+    color: "#f59e0b",
+    visible: true,
+  },
+  {
+    id: "portrait-frame",
+    parentId: "hud-center",
+    name: "Portrait Frame",
+    kind: "Frame",
+    marker: "0x00106743",
+    fields: elementFields({ x: "0x00106751" }, { x: 0.12, y: 0.385, width: 0, height: 1.45, pivotX: 0.5, pivotY: 0.5 }),
+    color: "#d97706",
+    visible: true,
+  },
+  {
+    id: "hud-right",
+    parentId: null,
     name: "HUD_Frame_Right",
     kind: "Frame",
     marker: "0x001098B7",
-    fields: defaultFrameFields("0x001098C5", -0.3888889),
+    fields: elementFields({ x: "0x001098C5" }, { x: 0.5, y: 0.5, width: 1, height: 1, pivotX: 0.5, pivotY: 0.5 }, -0.3888889),
     color: "#60a5fa",
+    visible: true,
+  },
+  {
+    id: "time-elements",
+    parentId: "hud-right",
+    name: "Time_Elements",
+    kind: "Frame",
+    marker: "0x00109923",
+    fields: elementFields({ x: "0x00109931" }, { x: 1, y: 1, width: 0.3, height: 0.1, pivotX: 1, pivotY: 0.83 }),
+    color: "#93c5fd",
+    visible: true,
+  },
+  {
+    id: "minimap-frame",
+    parentId: "hud-right",
+    name: "Minimap_Frame",
+    kind: "Frame",
+    marker: "0x00109979",
+    fields: elementFields({ x: "0x00109987" }, { x: 1, y: 0.9694999, width: 0.4, height: 0.4, pivotX: 1, pivotY: 1 }),
+    color: "#60a5fa",
+    visible: true,
+  },
+  {
+    id: "difficulty-modifiers-frame",
+    parentId: "hud-right",
+    name: "Difficulty & Modifiers Frame",
+    kind: "Frame",
+    marker: "0x001099DB",
+    fields: elementFields({ x: "0x001099E9" }, { x: 1, y: 0, width: 0.45, height: 0.5, pivotX: 1, pivotY: 0 }),
+    color: "#3b82f6",
+    visible: true,
+  },
+  {
+    id: "peers-hero-miniatures-frame",
+    parentId: "hud-right",
+    name: "Peers_Hero_Miniatures_Frame",
+    kind: "Frame",
+    marker: "0x00109A44",
+    fields: elementFields({ x: "0x00109A52" }, { x: 1, y: 0.57, width: 0.32, height: 0.18, pivotX: 1.15, pivotY: 1 }),
+    color: "#2563eb",
+    visible: true,
+  },
+  {
+    id: "consumables-frame",
+    parentId: "hud-right",
+    name: "Consumables_Frame",
+    kind: "Frame",
+    marker: "0x00109B00",
+    fields: elementFields({ x: "0x00109B0E" }, { x: 0.695, y: 1, width: 0.1777778, height: 0.05, pivotX: 1, pivotY: 1 }),
+    color: "#1d4ed8",
+    visible: true,
+  },
+  {
+    id: "dream-shards-frame",
+    parentId: "hud-right",
+    name: "Dream_Shards_Frame",
+    kind: "Frame",
+    marker: "0x00109B66",
+    fields: elementFields({ x: "0x00109B74" }, { x: 0.125, y: 1, width: 0.0416667, height: 0.0416667, pivotX: 0.5, pivotY: 1 }),
+    color: "#1e40af",
+    visible: true,
+  },
+  {
+    id: "reroll-frame",
+    parentId: "hud-right",
+    name: "Reroll_Frame",
+    kind: "Frame",
+    marker: "0x00109BD5",
+    fields: elementFields({ x: "0x00109BE3" }, { x: 0.375, y: 1, width: 0.0416667, height: 0.0416667, pivotX: 0.5, pivotY: 1 }),
+    color: "#1e3a8a",
+    visible: true,
+  },
+  {
+    id: "revive-frame",
+    parentId: "hud-right",
+    name: "Revive Frame",
+    kind: "Frame",
+    marker: "0x00109C3E",
+    fields: elementFields({ x: "0x00109C4C" }, { x: 0.625, y: 1, width: 0.0416667, height: 0.0416667, pivotX: 0.5, pivotY: 1 }),
+    color: "#172554",
+    visible: true,
+  },
+  {
+    id: "key-frame",
+    parentId: "hud-right",
+    name: "Key_Frame",
+    kind: "Frame",
+    marker: "0x00109C9F",
+    fields: elementFields({ x: "0x00109CAD" }, { x: 0.875, y: 1, width: 0.0416667, height: 0.0416667, pivotX: 0.5, pivotY: 1 }),
+    color: "#0f3c8a",
+    visible: true,
   },
 ];
 
@@ -135,13 +353,69 @@ function normalizedFromAnchorX(x: number, screenWidth: number, screenHeight: num
   return 0.5 + (x - screenWidth / 2) / screenHeight;
 }
 
-function normalizedExtent(element: LayoutElement, screenWidth: number, screenHeight: number) {
-  const anchorX = frameAnchorX(element.fields.x.currentValue, screenWidth, screenHeight);
-  const anchorY = frameAnchorY(element.fields.y.currentValue, screenHeight);
-  const width = element.fields.width.currentValue * screenHeight;
-  const height = element.fields.height.currentValue * screenHeight;
+type WorldRect = {
+  anchorX: number;
+  anchorY: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
+function getElement(elements: LayoutElement[], id: ElementId) {
+  return elements.find((element) => element.id === id);
+}
+
+function getChildren(elements: LayoutElement[], parentId: ElementId | null) {
+  return elements.filter((element) => element.parentId === parentId);
+}
+
+function isEffectivelyVisible(element: LayoutElement, elements: LayoutElement[]): boolean {
+  if (!element.visible) {
+    return false;
+  }
+  if (!element.parentId) {
+    return true;
+  }
+  const parent = getElement(elements, element.parentId);
+  return parent ? isEffectivelyVisible(parent, elements) : true;
+}
+
+function isAncestorHidden(element: LayoutElement, elements: LayoutElement[]): boolean {
+  if (!element.parentId) {
+    return false;
+  }
+  const parent = getElement(elements, element.parentId);
+  if (!parent) {
+    return false;
+  }
+  return !parent.visible || isAncestorHidden(parent, elements);
+}
+
+function worldRect(
+  element: LayoutElement,
+  elements: LayoutElement[],
+  screenWidth: number,
+  screenHeight: number,
+): WorldRect {
+  const parent = element.parentId ? getElement(elements, element.parentId) : null;
+  const parentRect = parent ? worldRect(parent, elements, screenWidth, screenHeight) : null;
+  const anchorX = parentRect
+    ? parentRect.x + element.fields.x.currentValue * parentRect.width
+    : frameAnchorX(element.fields.x.currentValue, screenWidth, screenHeight);
+  const anchorY = parentRect
+    ? parentRect.y + element.fields.y.currentValue * parentRect.height
+    : frameAnchorY(element.fields.y.currentValue, screenHeight);
+  const width = parentRect
+    ? element.fields.width.currentValue * parentRect.height
+    : element.fields.width.currentValue * screenWidth;
+  const height = parentRect
+    ? element.fields.height.currentValue * parentRect.height
+    : element.fields.height.currentValue * screenHeight;
 
   return {
+    anchorX,
+    anchorY,
     x: anchorX - width * element.fields.pivotX.currentValue,
     y: anchorY - height * element.fields.pivotY.currentValue,
     width,
@@ -160,11 +434,19 @@ function formatFloat(value: number) {
   return value.toFixed(7).replace(/0+$/, "").replace(/\.$/, ".0");
 }
 
+function shortLabel(name: string) {
+  return name
+    .replace(/^HUD_Frame_/, "HUD ")
+    .replace(/_Frame$/, "")
+    .replace(/_Elements$/, "")
+    .replace(/_/g, " ");
+}
+
 function App() {
   const shellRef = useRef<HTMLDivElement>(null);
   const canvasPanelRef = useRef<HTMLElement>(null);
   const [elements, setElements] = useState(initialElements);
-  const [selectedId, setSelectedId] = useState<LayoutElement["id"]>("right");
+  const [selectedId, setSelectedId] = useState<LayoutElement["id"]>("hud-right");
   const [monitors, setMonitors] = useState<MonitorInfo[]>([FALLBACK_MONITOR]);
   const [selectedMonitorId, setSelectedMonitorId] = useState(FALLBACK_MONITOR.id);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
@@ -283,7 +565,7 @@ function App() {
     const inset = safeLeft / selectedMonitor.height;
     setElements((current) =>
       current.map((element) => {
-        if (element.id === "left") {
+        if (element.id === "hud-left") {
           return {
             ...element,
             fields: {
@@ -295,7 +577,7 @@ function App() {
             },
           };
         }
-        if (element.id === "right") {
+        if (element.id === "hud-right") {
           return {
             ...element,
             fields: {
@@ -350,7 +632,51 @@ function App() {
     return () => observer.disconnect();
   }, []);
 
-  function updateElementX(id: LayoutElement["id"], stageX: number) {
+  function updateElementPosition(id: LayoutElement["id"], stageX: number, stageY: number) {
+    setElements((current) =>
+      current.map((element) => {
+        if (element.id !== id) {
+          return element;
+        }
+
+        const parent = element.parentId ? getElement(current, element.parentId) : null;
+        const parentRect = parent
+          ? worldRect(parent, current, selectedMonitor.width, selectedMonitor.height)
+          : null;
+        const worldX = stageX / scale;
+        const worldY = stageY / scale;
+        const nextX = parentRect
+          ? (worldX - parentRect.x) / parentRect.width
+          : normalizedFromAnchorX(worldX, selectedMonitor.width, selectedMonitor.height);
+        const nextY = parentRect ? (worldY - parentRect.y) / parentRect.height : worldY / selectedMonitor.height;
+
+        return {
+          ...element,
+          fields: {
+            ...element.fields,
+            x: {
+              ...element.fields.x,
+              currentValue: nextX,
+            },
+            y: {
+              ...element.fields.y,
+              currentValue: nextY,
+            },
+          },
+        };
+      }),
+    );
+  }
+
+  function updateElementField(
+    id: LayoutElement["id"],
+    fieldName: keyof LayoutElement["fields"],
+    value: number,
+  ) {
+    if (!Number.isFinite(value)) {
+      return;
+    }
+
     setElements((current) =>
       current.map((element) =>
         element.id === id
@@ -358,13 +684,9 @@ function App() {
               ...element,
               fields: {
                 ...element.fields,
-                x: {
-                  ...element.fields.x,
-                  currentValue: normalizedFromAnchorX(
-                    stageX / scale,
-                    selectedMonitor.width,
-                    selectedMonitor.height,
-                  ),
+                [fieldName]: {
+                  ...element.fields[fieldName],
+                  currentValue: value,
                 },
               },
             }
@@ -378,6 +700,68 @@ function App() {
       ...current,
       [id]: !current[id],
     }));
+  }
+
+  function toggleElementVisibility(id: ElementId) {
+    setElements((current) =>
+      current.map((element) =>
+        element.id === id ? { ...element, visible: !element.visible } : element,
+      ),
+    );
+  }
+
+  function renderElementTree(parentId: ElementId | null = null, depth = 0): ReactNode {
+    return getChildren(elements, parentId).map((element) => {
+      const children = getChildren(elements, element.id);
+      const collapsed = Boolean(collapsedSections[`tree:${element.id}`]);
+      const effectiveVisible = isEffectivelyVisible(element, elements);
+      const mutedByParent = element.visible && isAncestorHidden(element, elements);
+
+      return (
+        <div className="tree-node" key={element.id}>
+          <div
+            className={[
+              "tree-row",
+              element.id === selectedId ? "active" : "",
+              effectiveVisible ? "" : "hidden",
+              mutedByParent ? "muted" : "",
+            ].join(" ")}
+            style={{ paddingLeft: 6 + depth * 16 }}
+          >
+            <button
+              className="tree-expander"
+              disabled={children.length === 0}
+              onClick={() => toggleSection(`tree:${element.id}`)}
+              type="button"
+            >
+              {children.length > 0 ? (
+                collapsed ? (
+                  <IconChevronRight size={14} stroke={2} />
+                ) : (
+                  <IconChevronDown size={14} stroke={2} />
+                )
+              ) : null}
+            </button>
+            <button
+              className="tree-eye"
+              onClick={() => toggleElementVisibility(element.id)}
+              type="button"
+            >
+              {element.visible ? <IconEye size={15} stroke={2} /> : <IconEyeOff size={15} stroke={2} />}
+            </button>
+            <button
+              className="tree-label"
+              onClick={() => setSelectedId(element.id)}
+              type="button"
+            >
+              <span className="swatch" style={{ background: element.color }} />
+              <span>{element.name}</span>
+            </button>
+          </div>
+          {!collapsed && children.length > 0 ? renderElementTree(element.id, depth + 1) : null}
+        </div>
+      );
+    });
   }
 
   function sectionHeader(id: string, title: string) {
@@ -472,8 +856,6 @@ function App() {
                   <dd>{formatFloat(selectedMonitor.scaleFactor)}</dd>
                   <dt>16:9 Inset</dt>
                   <dd>{formatFloat(normalizedInset)}</dd>
-                  <dt>Game Dir</dt>
-                  <dd>{gameState.gameDir}</dd>
                 </dl>
               </div>
             )}
@@ -483,19 +865,7 @@ function App() {
             {sectionHeader("elements", "Elements")}
             {!collapsedSections.elements && (
               <div className="section-content">
-                <div className="element-list">
-                  {elements.map((element) => (
-                    <button
-                      className={element.id === selectedId ? "element-row active" : "element-row"}
-                      key={element.id}
-                      onClick={() => setSelectedId(element.id)}
-                      type="button"
-                    >
-                      <span className="swatch" style={{ background: element.color }} />
-                      <span>{element.name}</span>
-                    </button>
-                  ))}
-                </div>
+                <div className="element-tree">{renderElementTree()}</div>
               </div>
             )}
           </div>
@@ -543,30 +913,23 @@ function App() {
                   stroke="#64748b"
                   dash={[6, 6]}
                 />
-                {elements.map((element) => {
-                  const x =
-                    frameAnchorX(
-                      element.fields.x.currentValue,
-                      selectedMonitor.width,
-                      selectedMonitor.height,
-                    ) * scale;
-                  const y = frameAnchorY(element.fields.y.currentValue, selectedMonitor.height) * scale;
-                  const handleSize = element.id === "center" ? 20 : 26;
-                  const extent = normalizedExtent(
-                    element,
-                    selectedMonitor.width,
-                    selectedMonitor.height,
-                  );
+                {elements.filter((element) => isEffectivelyVisible(element, elements)).map((element) => {
+                  const rect = worldRect(element, elements, selectedMonitor.width, selectedMonitor.height);
+                  const x = rect.anchorX * scale;
+                  const y = rect.anchorY * scale;
+                  const handleSize = element.parentId === null ? 26 : 20;
+                  const extent = rect;
                   return (
                     <Group
                       key={element.id}
-                      draggable={element.id !== "center"}
+                      draggable
                       x={x}
                       y={y}
                       onClick={() => setSelectedId(element.id)}
                       onTap={() => setSelectedId(element.id)}
-                      onDragMove={(event) => updateElementX(element.id, event.target.x())}
-                      dragBoundFunc={(pos) => ({ x: pos.x, y })}
+                      onDragMove={(event) =>
+                        updateElementPosition(element.id, event.target.x(), event.target.y())
+                      }
                     >
                       <Rect
                         x={(extent.x - x / scale) * scale}
@@ -605,7 +968,7 @@ function App() {
                         y={-26}
                         fill="#f8fafc"
                         fontSize={14}
-                        text={`${element.name}\nanchor X ${formatFloat(element.fields.x.currentValue)}`}
+                        text={shortLabel(element.name)}
                       />
                     </Group>
                   );
@@ -631,19 +994,80 @@ function App() {
                   <dd>{selected.fields.x.offset ?? "-"}</dd>
                   <dt>Original X</dt>
                   <dd>{formatFloat(selected.fields.x.defaultValue)}</dd>
-                  <dt>Y</dt>
-                  <dd>{formatFloat(selected.fields.y.currentValue)}</dd>
-                  <dt>Width</dt>
-                  <dd>{formatFloat(selected.fields.width.currentValue)}</dd>
-                  <dt>Height</dt>
-                  <dd>{formatFloat(selected.fields.height.currentValue)}</dd>
-                  <dt>Pivot</dt>
+                  <dt>X</dt>
                   <dd>
-                    {formatFloat(selected.fields.pivotX.currentValue)},{" "}
-                    {formatFloat(selected.fields.pivotY.currentValue)}
+                    <input
+                      className="number-input"
+                      onChange={(event) =>
+                        updateElementField(selected.id, "x", event.currentTarget.valueAsNumber)
+                      }
+                      step="0.001"
+                      type="number"
+                      value={formatFloat(selected.fields.x.currentValue)}
+                    />
                   </dd>
-                  <dt>Current X</dt>
-                  <dd>{formatFloat(selected.fields.x.currentValue)}</dd>
+                  <dt>Y</dt>
+                  <dd>
+                    <input
+                      className="number-input"
+                      onChange={(event) =>
+                        updateElementField(selected.id, "y", event.currentTarget.valueAsNumber)
+                      }
+                      step="0.001"
+                      type="number"
+                      value={formatFloat(selected.fields.y.currentValue)}
+                    />
+                  </dd>
+                  <dt>Width</dt>
+                  <dd>
+                    <input
+                      className="number-input"
+                      min="0"
+                      onChange={(event) =>
+                        updateElementField(selected.id, "width", event.currentTarget.valueAsNumber)
+                      }
+                      step="0.001"
+                      type="number"
+                      value={formatFloat(selected.fields.width.currentValue)}
+                    />
+                  </dd>
+                  <dt>Height</dt>
+                  <dd>
+                    <input
+                      className="number-input"
+                      min="0"
+                      onChange={(event) =>
+                        updateElementField(selected.id, "height", event.currentTarget.valueAsNumber)
+                      }
+                      step="0.001"
+                      type="number"
+                      value={formatFloat(selected.fields.height.currentValue)}
+                    />
+                  </dd>
+                  <dt>Pivot X</dt>
+                  <dd>
+                    <input
+                      className="number-input"
+                      onChange={(event) =>
+                        updateElementField(selected.id, "pivotX", event.currentTarget.valueAsNumber)
+                      }
+                      step="0.001"
+                      type="number"
+                      value={formatFloat(selected.fields.pivotX.currentValue)}
+                    />
+                  </dd>
+                  <dt>Pivot Y</dt>
+                  <dd>
+                    <input
+                      className="number-input"
+                      onChange={(event) =>
+                        updateElementField(selected.id, "pivotY", event.currentTarget.valueAsNumber)
+                      }
+                      step="0.001"
+                      type="number"
+                      value={formatFloat(selected.fields.pivotY.currentValue)}
+                    />
+                  </dd>
                   <dt>Delta px</dt>
                   <dd>
                     {Math.round(
