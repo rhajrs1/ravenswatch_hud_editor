@@ -3,8 +3,6 @@ import { invoke } from "@tauri-apps/api/core";
 import { confirm, open, save } from "@tauri-apps/plugin-dialog";
 import "./App.css";
 
-import { LayoutCanvas } from "./features/layout-editor/canvas/LayoutCanvas";
-import { ElementTreeSection } from "./features/layout-editor/element-tree/ElementTree";
 import { AppHeader } from "./features/layout-editor/header/AppHeader";
 import { applyLayoutCommand, createLayoutCommand } from "./features/layout-editor/history/layoutHistoryModel";
 import type { LayoutCommand, LayoutFieldChange, LayoutFieldName } from "./features/layout-editor/history/layoutHistoryModel";
@@ -13,8 +11,7 @@ import { createLayoutSnapshot, layoutSnapshotsEqual } from "./features/layout-ed
 import type { LayoutSnapshot } from "./features/layout-editor/model/layoutSnapshot";
 import { initialElements, mergeElementSchema } from "./features/layout-editor/model/schema";
 import type { ElementId, GameFolderState, LayoutElement, MonitorInfo, NativeMonitorInfo } from "./features/layout-editor/model/types";
-import { MonitorSection } from "./features/layout-editor/monitor/MonitorSection";
-import { PropertyPanel } from "./features/layout-editor/properties/PropertyPanel";
+import { LayoutWorkspace } from "./features/layout-editor/workspace/LayoutWorkspace";
 
 const TARGET_ASPECT = 16 / 9;
 const MAX_HISTORY = 100;
@@ -508,51 +505,30 @@ function App() {
           </div>
         </section>
       ) : gameState?.found ? (
-      <section className="workspace">
-        <aside className="left-panel">
-          <MonitorSection
-            collapsedSections={collapsedSections}
-            monitors={monitors}
-            normalizedInset={normalizedInset}
-            selectedMonitor={selectedMonitor}
-            selectedMonitorId={selectedMonitorId}
-            onMonitorChange={setSelectedMonitorId}
-            onToggleSection={toggleSection}
-          />
-          <ElementTreeSection
-            collapsedSections={collapsedSections}
-            elements={elements}
-            selectedId={selectedId}
-            onSelect={setSelectedId}
-            onToggleElementVisibility={toggleElementVisibility}
-            onToggleSection={toggleSection}
-          />
-        </aside>
-
-        <LayoutCanvas
+        <LayoutWorkspace
           canRedo={redoStack.length > 0}
           canUndo={undoStack.length > 0}
+          collapsedSections={collapsedSections}
           elements={elements}
+          monitors={monitors}
+          normalizedInset={normalizedInset}
+          selected={selected}
           selectedId={selectedId}
           selectedMonitor={selectedMonitor}
+          selectedMonitorId={selectedMonitorId}
           showSafeArea={showSafeArea}
+          onCommitElementField={commitElementField}
           onCommitElementMove={commitElementMove}
+          onMonitorChange={setSelectedMonitorId}
           onMoveElement={updateElementPosition}
           onRedo={redoLayoutChange}
           onSelect={setSelectedId}
           onShowSafeAreaChange={setShowSafeArea}
-          onUndo={undoLayoutChange}
-        />
-
-        <PropertyPanel
-          collapsedSections={collapsedSections}
-          selected={selected}
-          selectedMonitor={selectedMonitor}
-          onCommitElementField={commitElementField}
+          onToggleElementVisibility={toggleElementVisibility}
           onToggleSection={toggleSection}
+          onUndo={undoLayoutChange}
           onUpdateElementField={updateElementField}
         />
-      </section>
       ) : (
         <section className="empty-state">
           <div className="empty-card">
