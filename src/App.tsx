@@ -293,7 +293,7 @@ function App() {
       }
       return [];
     });
-    const command = createLayoutCommand("Apply 16:9 Safe Area", changes);
+    const command = createLayoutCommand("Apply Basic Setup (5120 x 1440)", changes);
     if (command) {
       commitCommand(command);
     }

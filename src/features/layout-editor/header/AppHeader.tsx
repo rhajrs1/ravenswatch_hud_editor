@@ -66,7 +66,7 @@ export function AppHeader({
               {presetMenuOpen && (
                 <div className="preset-popover">
                   <button onClick={onApplySafeAreaPreset} type="button">
-                    16:9 Safe Area
+                    Basic Setup (5120 x 1440)
                   </button>
                 </div>
               )}
