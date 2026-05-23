@@ -8,7 +8,8 @@ import { normalizedFromRootAnchorX, worldRect } from "./canvasModel";
 const TARGET_ASPECT = 16 / 9;
 const VIEW_PADDING = 28;
 const MIN_ZOOM = 0.25;
-const MAX_ZOOM = 8;
+const MAX_ZOOM = 10;
+const ELEMENT_HIT_STROKE_WIDTH = 18;
 
 function shortLabel(name: string) {
   return name
@@ -61,6 +62,8 @@ export function LayoutCanvas({ canRedo, canUndo, elements, selectedId, selectedM
   const lastPanPointerRef = useRef<Point | null>(null);
   const spacePressedRef = useRef(false);
   const elementDragRef = useRef<{ id: ElementId; offset: Point; start: Point; latest: Point } | null>(null);
+  const hasMeasuredViewportRef = useRef(false);
+  const selectedMonitorRef = useRef(selectedMonitor);
   const [viewportSize, setViewportSize] = useState({ width: 640, height: 360 });
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState<Point>(() => centeredPan(640, 360, selectedMonitor, fitScaleForViewport(640, 360, selectedMonitor)));
@@ -75,6 +78,10 @@ export function LayoutCanvas({ canRedo, canUndo, elements, selectedId, selectedM
   const safeLeft = Math.max(0, (selectedMonitor.width - safeWidth) / 2);
 
   useEffect(() => {
+    selectedMonitorRef.current = selectedMonitor;
+  }, [selectedMonitor]);
+
+  useEffect(() => {
     const node = stageShellRef.current;
     if (!node) {
       return;
@@ -82,9 +89,29 @@ export function LayoutCanvas({ canRedo, canUndo, elements, selectedId, selectedM
 
     const updateSize = () => {
       const rect = node.getBoundingClientRect();
-      setViewportSize({
+      const nextSize = {
         width: Math.max(1, Math.round(rect.width)),
         height: Math.max(1, Math.round(rect.height)),
+      };
+
+      setViewportSize((currentSize) => {
+        if (currentSize.width === nextSize.width && currentSize.height === nextSize.height) {
+          return currentSize;
+        }
+
+        if (!hasMeasuredViewportRef.current) {
+          const monitor = selectedMonitorRef.current;
+          const nextFitScale = fitScaleForViewport(nextSize.width, nextSize.height, monitor);
+          setPan(centeredPan(nextSize.width, nextSize.height, monitor, nextFitScale));
+          hasMeasuredViewportRef.current = true;
+          return nextSize;
+        }
+
+        setPan((currentPan) => ({
+          x: currentPan.x + (nextSize.width - currentSize.width) / 2,
+          y: currentPan.y + (nextSize.height - currentSize.height) / 2,
+        }));
+        return nextSize;
       });
     };
 
@@ -101,7 +128,7 @@ export function LayoutCanvas({ canRedo, canUndo, elements, selectedId, selectedM
     elementDragRef.current = null;
     setZoom(1);
     setPan(centeredPan(viewportSize.width, viewportSize.height, selectedMonitor, nextFitScale));
-  }, [monitorKey, viewportSize.width, viewportSize.height, selectedMonitor]);
+  }, [monitorKey]);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -318,11 +345,38 @@ export function LayoutCanvas({ canRedo, canUndo, elements, selectedId, selectedM
               <Line points={[selectedMonitor.width / 2, 0, selectedMonitor.width / 2, selectedMonitor.height]} stroke="#64748b" strokeWidth={1 / displayScale} dash={[6 / displayScale, 6 / displayScale]} />
               {elements.filter((element) => isEffectivelyVisible(element, elements)).map((element) => {
                 const rect = worldRect(element, elements, selectedMonitor.width, selectedMonitor.height);
+                const localX = rect.x - rect.anchorX;
+                const localY = rect.y - rect.anchorY;
                 return (
-                  <Group key={element.id} x={rect.anchorX} y={rect.anchorY} onMouseDown={(event) => handleElementMouseDown(element.id, event)} onTap={() => onSelect(element.id)}>
-                    <Rect x={rect.x - rect.anchorX} y={rect.y - rect.anchorY} width={rect.width} height={rect.height} stroke={element.color} strokeWidth={1 / displayScale} opacity={element.id === selectedId ? 0.78 : 0.28} />
-                    <Circle radius={4 / displayScale} fill="#ef4444" />
-                    <Text x={16 / displayScale} y={-26 / displayScale} fill="#f8fafc" fontSize={14 / displayScale} text={shortLabel(element.name)} />
+                  <Group key={element.id} x={rect.anchorX} y={rect.anchorY}>
+                    <Rect
+                      x={localX}
+                      y={localY}
+                      width={rect.width}
+                      height={rect.height}
+                      stroke={element.color}
+                      strokeWidth={1 / displayScale}
+                      opacity={element.id === selectedId ? 0.78 : 0.28}
+                      listening={false}
+                    />
+                    <Rect
+                      x={localX}
+                      y={localY}
+                      width={rect.width}
+                      height={rect.height}
+                      stroke="rgba(255,255,255,0.01)"
+                      strokeWidth={ELEMENT_HIT_STROKE_WIDTH / displayScale}
+                      fillEnabled={false}
+                      onMouseDown={(event) => handleElementMouseDown(element.id, event)}
+                      onTap={() => onSelect(element.id)}
+                    />
+                    <Circle
+                      radius={(element.id === selectedId ? 5 : 4) / displayScale}
+                      fill="#ef4444"
+                      onMouseDown={(event) => handleElementMouseDown(element.id, event)}
+                      onTap={() => onSelect(element.id)}
+                    />
+                    <Text x={16 / displayScale} y={-26 / displayScale} fill="#f8fafc" fontSize={14 / displayScale} text={shortLabel(element.name)} listening={false} />
                   </Group>
                 );
               })}

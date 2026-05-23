@@ -35,6 +35,12 @@ export type LayoutField = {
   writable: boolean;
 };
 
+export type WidthBasis = {
+  offset: string;
+  rawValue: number;
+  basis: "parentWidth" | "parentHeight";
+};
+
 export type ElementId =
   | "left-frame"
   | "hud-left"
@@ -103,6 +109,7 @@ export type LayoutElement = {
   name: string;
   kind: "Frame";
   marker: string;
+  widthBasis: WidthBasis;
   fields: {
     x: LayoutField;
     y: LayoutField;
@@ -112,6 +119,7 @@ export type LayoutElement = {
     pivotY: LayoutField;
   };
   color: string;
+  hidden?: boolean;
   visible: boolean;
 };
 

@@ -5,10 +5,13 @@ export function getElement(elements: LayoutElement[], id: ElementId) {
 }
 
 export function getChildren(elements: LayoutElement[], parentId: ElementId | null) {
-  return elements.filter((element) => element.parentId === parentId);
+  return elements.filter((element) => element.parentId === parentId && !element.hidden);
 }
 
 export function isEffectivelyVisible(element: LayoutElement, elements: LayoutElement[]): boolean {
+  if (element.hidden) {
+    return false;
+  }
   if (!element.visible) {
     return false;
   }

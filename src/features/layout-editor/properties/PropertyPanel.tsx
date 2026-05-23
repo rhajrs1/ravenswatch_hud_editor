@@ -6,6 +6,10 @@ function formatFloat(value: number) {
   return value.toFixed(7).replace(/0+$/, "").replace(/\.$/, ".0");
 }
 
+function widthBasisLabel(selected: LayoutElement) {
+  return selected.widthBasis.basis === "parentHeight" ? "Parent height" : "Parent width";
+}
+
 type PropertyPanelProps = {
   collapsedSections: Record<string, boolean>;
   selected: LayoutElement;
@@ -61,6 +65,12 @@ export function PropertyPanel({ collapsedSections, selected, selectedMonitor, on
             <dd>{selected.name}</dd>
             <dt>Marker</dt>
             <dd>{selected.marker}</dd>
+            <dt>Width Basis</dt>
+            <dd>{widthBasisLabel(selected)}</dd>
+            <dt>Width Basis Offset</dt>
+            <dd>{selected.widthBasis.offset}</dd>
+            <dt>Width Basis Raw</dt>
+            <dd>{selected.widthBasis.rawValue}</dd>
             <dt>X Offset</dt>
             <dd>{selected.fields.x.offset ?? "-"}</dd>
             <dt>Original X</dt>
