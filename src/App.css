@@ -208,6 +208,18 @@ button:hover {
   background: #2563eb;
 }
 
+.header-action.primary:disabled {
+  border-color: #1e3a8a;
+  background: #172554;
+  color: #64748b;
+  cursor: default;
+}
+
+.header-action.primary:disabled:hover {
+  border-color: #1e3a8a;
+  background: #172554;
+}
+
 .header-action.secondary {
   color: #cbd5e1;
 }

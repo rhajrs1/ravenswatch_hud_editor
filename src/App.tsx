@@ -9,6 +9,8 @@ import { AppHeader } from "./features/layout-editor/header/AppHeader";
 import { applyLayoutCommand, createLayoutCommand } from "./features/layout-editor/history/layoutHistoryModel";
 import type { LayoutCommand, LayoutFieldChange, LayoutFieldName } from "./features/layout-editor/history/layoutHistoryModel";
 import { backupLayoutFile, parseHexOffset, readLayoutValues, restoreLayoutFile, saveLayoutValues } from "./features/layout-editor/model/persistence";
+import { createLayoutSnapshot, layoutSnapshotsEqual } from "./features/layout-editor/model/layoutSnapshot";
+import type { LayoutSnapshot } from "./features/layout-editor/model/layoutSnapshot";
 import { initialElements, mergeElementSchema } from "./features/layout-editor/model/schema";
 import type { ElementId, GameFolderState, LayoutElement, MonitorInfo, NativeMonitorInfo } from "./features/layout-editor/model/types";
 import { MonitorSection } from "./features/layout-editor/monitor/MonitorSection";
@@ -45,6 +47,7 @@ function App() {
   const [gameStateError, setGameStateError] = useState<string | null>(null);
   const [undoStack, setUndoStack] = useState<LayoutCommand[]>([]);
   const [redoStack, setRedoStack] = useState<LayoutCommand[]>([]);
+  const [savedBaseline, setSavedBaseline] = useState<LayoutSnapshot | null>(null);
 
   useEffect(() => {
     setElements((current) => mergeElementSchema(current));
@@ -54,8 +57,7 @@ function App() {
     const values = await readLayoutValues(gameDir, initialElements);
     const valueByOffset = new Map(values.map((value) => [value.offset, value.value]));
 
-    setElements((current) =>
-      mergeElementSchema(current).map((element) => ({
+    const nextElements = mergeElementSchema(elements).map((element) => ({
         ...element,
         fields: Object.fromEntries(
           Object.entries(element.fields).map(([key, field]) => {
@@ -72,8 +74,9 @@ function App() {
             ];
           }),
         ) as LayoutElement["fields"],
-      })),
-    );
+      }));
+    setElements(nextElements);
+    setSavedBaseline(createLayoutSnapshot(nextElements));
     setUndoStack([]);
     setRedoStack([]);
   }
@@ -111,6 +114,7 @@ function App() {
   const safeWidth = selectedMonitor.height * TARGET_ASPECT;
   const safeLeft = Math.max(0, (selectedMonitor.width - safeWidth) / 2);
   const normalizedInset = safeLeft / selectedMonitor.height;
+  const hasUnsavedChanges = savedBaseline !== null && !layoutSnapshotsEqual(createLayoutSnapshot(elements), savedBaseline);
   useEffect(() => {
     async function loadGameState() {
       try {
@@ -305,6 +309,7 @@ function App() {
       return;
     }
     await saveLayoutValues(gameState.gameDir, elements);
+    setSavedBaseline(createLayoutSnapshot(elements));
   }
 
   function updateElementPosition(id: LayoutElement["id"], nextX: number, nextY: number) {
@@ -477,6 +482,7 @@ function App() {
       <AppHeader
         fileMenuOpen={fileMenuOpen}
         gameState={gameState}
+        hasUnsavedChanges={hasUnsavedChanges}
         presetMenuOpen={presetMenuOpen}
         onApplySafeAreaPreset={applySafeAreaPreset}
         onBackupSavedFile={backupSavedFile}

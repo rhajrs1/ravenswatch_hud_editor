@@ -3,6 +3,7 @@ import type { GameFolderState } from "../model/types";
 type AppHeaderProps = {
   fileMenuOpen: boolean;
   gameState: GameFolderState | null;
+  hasUnsavedChanges: boolean;
   presetMenuOpen: boolean;
   onBackupSavedFile: () => void;
   onBrowseGameFolder: () => void;
@@ -17,6 +18,7 @@ type AppHeaderProps = {
 export function AppHeader({
   fileMenuOpen,
   gameState,
+  hasUnsavedChanges,
   presetMenuOpen,
   onBackupSavedFile,
   onBrowseGameFolder,
@@ -72,7 +74,7 @@ export function AppHeader({
             <button className="header-action secondary" onClick={onResetDefaults} type="button">
               Reset Defaults
             </button>
-            <button className="header-action primary" onClick={onSaveLayout} type="button">
+            <button className="header-action primary" disabled={!hasUnsavedChanges} onClick={onSaveLayout} type="button">
               Save
             </button>
           </div>
