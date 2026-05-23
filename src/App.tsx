@@ -127,6 +127,11 @@ type LayoutPatch = {
   value: number;
 };
 
+type LayoutValue = {
+  offset: number;
+  value: number;
+};
+
 const field = (
   offset: string | null,
   defaultValue: number,
@@ -166,7 +171,7 @@ const initialElements: LayoutElement[] = [
     name: "LEFT_FRAME",
     kind: "Frame",
     marker: "0x001029AA",
-    fields: elementFields({}, { x: 0.01, y: 0.5, width: 0.97, height: 0.97, pivotX: 0, pivotY: 0.5 }),
+    fields: elementFields({ x: "0x001029B8" }, { x: 0.01, y: 0.5, width: 0.97, height: 0.97, pivotX: 0, pivotY: 0.5 }),
     color: "#86efac",
     visible: true,
   },
@@ -176,7 +181,7 @@ const initialElements: LayoutElement[] = [
     name: "HUD_Frame_Left",
     kind: "Frame",
     marker: "0x00103C9D",
-    fields: elementFields({ x: "0x00103CAB" }, { x: 0.5, y: 0.5, width: 1, height: 1, pivotX: 0.5, pivotY: 0.5 }, 1.3888889),
+    fields: elementFields({ x: "0x00103CAB" }, { x: 0.5, y: 0.5, width: 1, height: 1, pivotX: 0.5, pivotY: 0.5 }),
     color: "#31c48d",
     visible: true,
   },
@@ -316,7 +321,7 @@ const initialElements: LayoutElement[] = [
     name: "CENTER FRAME",
     kind: "Frame",
     marker: "0x00102949",
-    fields: elementFields({}, { x: 0.5, y: 0.5, width: 1.703, height: 0.97, pivotX: 0.5, pivotY: 0.5 }),
+    fields: elementFields({ x: "0x00102957" }, { x: 0.5, y: 0.5, width: 1.703, height: 0.97, pivotX: 0.5, pivotY: 0.5 }),
     color: "#fde68a",
     visible: true,
   },
@@ -396,7 +401,7 @@ const initialElements: LayoutElement[] = [
     name: "RIGHT FRAME",
     kind: "Frame",
     marker: "0x001028F5",
-    fields: elementFields({}, { x: 0.99, y: 0.5, width: 0.97, height: 0.97, pivotX: 1, pivotY: 0.5 }),
+    fields: elementFields({ x: "0x00102903" }, { x: 0.99, y: 0.5, width: 0.97, height: 0.97, pivotX: 1, pivotY: 0.5 }),
     color: "#bfdbfe",
     visible: true,
   },
@@ -406,7 +411,7 @@ const initialElements: LayoutElement[] = [
     name: "HUD_Frame_Right",
     kind: "Frame",
     marker: "0x001098B7",
-    fields: elementFields({ x: "0x001098C5" }, { x: 0.5, y: 0.5, width: 1, height: 1, pivotX: 0.5, pivotY: 0.5 }, -0.3888889),
+    fields: elementFields({ x: "0x001098C5" }, { x: 0.5, y: 0.5, width: 1, height: 1, pivotX: 0.5, pivotY: 0.5 }),
     color: "#60a5fa",
     visible: true,
   },
@@ -710,6 +715,21 @@ function parseHexOffset(offset: string | null) {
   return Number.parseInt(offset.replace(/^0x/i, ""), 16);
 }
 
+function writableLayoutOffsets(elements: LayoutElement[]) {
+  const offsets = new Set<number>();
+
+  for (const element of elements) {
+    for (const field of Object.values(element.fields)) {
+      const offset = field.writable ? parseHexOffset(field.offset) : null;
+      if (offset !== null) {
+        offsets.add(offset);
+      }
+    }
+  }
+
+  return [...offsets];
+}
+
 function formatFloat(value: number) {
   return value.toFixed(7).replace(/0+$/, "").replace(/\.$/, ".0");
 }
@@ -739,6 +759,59 @@ function App() {
   useEffect(() => {
     setElements((current) => mergeElementSchema(current));
   }, []);
+
+  useEffect(() => {
+    if (!gameState?.found || !gameState.gameDir) {
+      return;
+    }
+
+    let cancelled = false;
+    const gameDir = gameState.gameDir;
+
+    async function loadLayoutValues() {
+      const offsets = writableLayoutOffsets(initialElements);
+      const values = await invoke<LayoutValue[]>("load_layout_values", {
+        gameDir,
+        requests: offsets.map((offset) => ({ offset })),
+      });
+      const valueByOffset = new Map(values.map((value) => [value.offset, value.value]));
+
+      if (cancelled) {
+        return;
+      }
+
+      setElements((current) =>
+        mergeElementSchema(current).map((element) => ({
+          ...element,
+          fields: Object.fromEntries(
+            Object.entries(element.fields).map(([key, field]) => {
+              const offset = parseHexOffset(field.offset);
+              return [
+                key,
+                {
+                  ...field,
+                  currentValue:
+                    offset !== null && valueByOffset.has(offset)
+                      ? valueByOffset.get(offset)!
+                      : field.currentValue,
+                },
+              ];
+            }),
+          ) as LayoutElement["fields"],
+        })),
+      );
+    }
+
+    loadLayoutValues().catch((error) => {
+      if (!cancelled) {
+        setGameStateError(String(error));
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [gameState?.found, gameState?.gameDir]);
 
   const selected = elements.find((element) => element.id === selectedId) ?? elements[0];
   const selectedMonitor =
@@ -846,29 +919,43 @@ function App() {
   }
 
   function applySafeAreaPreset() {
-    const inset = safeLeft / selectedMonitor.height;
+    const safeAreaLeftX = safeLeft / selectedMonitor.width;
+    const safeAreaRightX = (selectedMonitor.width - safeLeft) / selectedMonitor.width;
+
     setElements((current) =>
       current.map((element) => {
-        if (element.id === "hud-left") {
+        if (element.id === "left-frame") {
           return {
             ...element,
             fields: {
               ...element.fields,
               x: {
                 ...element.fields.x,
-                currentValue: element.fields.x.defaultValue + inset,
+                currentValue: safeAreaLeftX,
               },
             },
           };
         }
-        if (element.id === "hud-right") {
+        if (element.id === "right-frame") {
           return {
             ...element,
             fields: {
               ...element.fields,
               x: {
                 ...element.fields.x,
-                currentValue: element.fields.x.defaultValue - inset,
+                currentValue: safeAreaRightX,
+              },
+            },
+          };
+        }
+        if (element.id === "hud-left" || element.id === "hud-right") {
+          return {
+            ...element,
+            fields: {
+              ...element.fields,
+              x: {
+                ...element.fields.x,
+                currentValue: element.fields.x.defaultValue,
               },
             },
           };

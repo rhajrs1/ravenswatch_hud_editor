@@ -41,6 +41,19 @@ struct LayoutPatch {
     value: f32,
 }
 
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct LayoutReadRequest {
+    offset: u64,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct LayoutValue {
+    offset: u64,
+    value: f32,
+}
+
 #[tauri::command]
 fn app_version() -> &'static str {
     env!("CARGO_PKG_VERSION")
@@ -193,6 +206,44 @@ fn save_layout_values(game_dir: String, patches: Vec<LayoutPatch>) -> Result<(),
 }
 
 #[tauri::command]
+fn load_layout_values(
+    game_dir: String,
+    requests: Vec<LayoutReadRequest>,
+) -> Result<Vec<LayoutValue>, String> {
+    let game_dir = PathBuf::from(game_dir);
+    if !is_valid_game_dir(&game_dir) {
+        return Err("The configured Ravenswatch game folder is not valid.".to_string());
+    }
+
+    let path = layout_path(&game_dir);
+    let data = fs::read(&path).map_err(|error| error.to_string())?;
+    let mut values = Vec::with_capacity(requests.len());
+
+    for request in requests {
+        let offset = usize::try_from(request.offset)
+            .map_err(|_| format!("Read offset is too large: {}", request.offset))?;
+        let end = offset
+            .checked_add(4)
+            .ok_or_else(|| format!("Read offset overflows: {}", request.offset))?;
+
+        if end > data.len() {
+            return Err(format!(
+                "Read offset is outside the layout file: 0x{offset:08X}"
+            ));
+        }
+
+        values.push(LayoutValue {
+            offset: request.offset,
+            value: f32::from_le_bytes(data[offset..end].try_into().map_err(|_| {
+                format!("Failed to read f32 at layout offset: 0x{offset:08X}")
+            })?),
+        });
+    }
+
+    Ok(values)
+}
+
+#[tauri::command]
 fn get_monitors(window: tauri::Window) -> Result<Vec<MonitorInfo>, String> {
     let primary = window.primary_monitor().map_err(|error| error.to_string())?;
     let monitors = window
@@ -237,6 +288,7 @@ pub fn run() {
             get_monitors,
             get_game_folder_state,
             set_game_folder,
+            load_layout_values,
             save_layout_values
         ])
         .run(tauri::generate_context!())
