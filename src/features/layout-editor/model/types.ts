@@ -1,0 +1,118 @@
+export type MonitorInfo = {
+  id: string;
+  name: string;
+  width: number;
+  height: number;
+  x: number;
+  y: number;
+  scaleFactor: number;
+  isPrimary: boolean;
+};
+
+export type NativeMonitorInfo = {
+  id: string;
+  name: string;
+  width: number;
+  height: number;
+  x: number;
+  y: number;
+  scale_factor: number;
+  is_primary: boolean;
+};
+
+export type GameFolderState = {
+  found: boolean;
+  gameDir: string | null;
+  layoutPath: string | null;
+  source: string;
+  message: string;
+};
+
+export type LayoutField = {
+  offset: string | null;
+  defaultValue: number;
+  currentValue: number;
+  writable: boolean;
+};
+
+export type ElementId =
+  | "left-frame"
+  | "hud-left"
+  | "status-elements"
+  | "skill-mo-navzone"
+  | "skill-frame"
+  | "skills-items-separator-frame"
+  | "magical-objects-frame"
+  | "bonus-frame"
+  | "vitality-frame"
+  | "damage-bonus-frame"
+  | "armour-frame"
+  | "crit-chance-frame"
+  | "crit-damage-frame"
+  | "exp-frame"
+  | "life-frame"
+  | "center-frame"
+  | "hud-center"
+  | "ability-frame"
+  | "abilities-banner-frame"
+  | "abilities-layout-back"
+  | "abilities-layout"
+  | "abilities-layout-top"
+  | "portrait-frame"
+  | "right-frame"
+  | "hud-right"
+  | "time-elements"
+  | "minimap-frame"
+  | "minimap-picture"
+  | "minimap-overlay-picture"
+  | "overtime-text-minimap-frame"
+  | "difficulty-modifiers-frame"
+  | "difficulty-frame"
+  | "modifiers-layout"
+  | "modifier-frame-size-ref"
+  | "peers-hero-miniatures-frame"
+  | "social-options-menu"
+  | "consumables-frame"
+  | "dream-shards-frame"
+  | "reroll-frame"
+  | "revive-frame"
+  | "key-frame";
+
+export type LayoutElement = {
+  id: ElementId;
+  parentId: ElementId | null;
+  name: string;
+  kind: "Frame";
+  marker: string;
+  fields: {
+    x: LayoutField;
+    y: LayoutField;
+    width: LayoutField;
+    height: LayoutField;
+    pivotX: LayoutField;
+    pivotY: LayoutField;
+  };
+  color: string;
+  visible: boolean;
+};
+
+export type LayoutPatch = {
+  offset: number;
+  value: number;
+};
+
+export type LayoutValue = {
+  offset: number;
+  value: number;
+};
+
+
+export type WorldRect = {
+  anchorX: number;
+  anchorY: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
