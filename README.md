@@ -37,6 +37,13 @@ Ravenswatch HUD Layout Editor lets you adjust selected HUD frames and elements v
 - Reset supported values to known defaults
 - Backup and restore the saved layout file
 
+## Supported Versions
+
+| Date | Game Version | Patch |
+| --- | --- | --- |
+| 2026-05-27 | 1.05 | Songs of Thieves |
+| 2026-05-23 | 1.04 | Merlin DLC |
+
 ## Safety / Backup
 
 This tool modifies one Ravenswatch cooked layout file:
