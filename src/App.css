@@ -439,6 +439,20 @@ button:hover {
   opacity: 0.58;
 }
 
+.unavailable-tree {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  margin-top: 8px;
+  padding-top: 8px;
+}
+
+.tree-group-label {
+  color: rgba(255, 255, 255, 0.48);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 6px 5px;
+  text-transform: uppercase;
+}
+
 .tree-expander,
 .tree-eye,
 .tree-label {
@@ -526,6 +540,17 @@ button:hover {
   color: #ffffff;
   font-family: "Cascadia Mono", Consolas, monospace;
   overflow-wrap: anywhere;
+}
+
+.inline-warning {
+  background: rgba(249, 115, 22, 0.12);
+  border: 1px solid rgba(249, 115, 22, 0.36);
+  border-radius: 6px;
+  color: #fed7aa;
+  font-size: 12px;
+  line-height: 1.35;
+  margin-bottom: 8px;
+  padding: 7px 8px;
 }
 
 .number-input {

@@ -42,13 +42,13 @@ Ravenswatch HUD Layout Editor lets you adjust selected HUD frames and elements v
 This tool modifies one Ravenswatch cooked layout file:
 
 ```text
-DarkTalesResources\_Cooking\MzidisFqiidzyv\Aqurqv\Aqur_Srxxrz!Aqur_Srxxrz.qzidis.ri.MzidisFqiidzyvLqvrwubq.yqz
+DarkTalesResources\_Cooking\MzidisFqiidzyv\Aqurqv\Aqur_Srxxrz!Aqur_Srxxrz_Jjtgiq5.qzidis.ri.MzidisFqiidzyvLqvrwubq.yqz
 ```
 
 With the default Steam install location, the full path is:
 
 ```text
-C:\Program Files (x86)\Steam\steamapps\common\Ravenswatch\DarkTalesResources\_Cooking\MzidisFqiidzyv\Aqurqv\Aqur_Srxxrz!Aqur_Srxxrz.qzidis.ri.MzidisFqiidzyvLqvrwubq.yqz
+C:\Program Files (x86)\Steam\steamapps\common\Ravenswatch\DarkTalesResources\_Cooking\MzidisFqiidzyv\Aqurqv\Aqur_Srxxrz!Aqur_Srxxrz_Jjtgiq5.qzidis.ri.MzidisFqiidzyvLqvrwubq.yqz
 ```
 
 If you want to make a manual backup, backing up this single file is enough.

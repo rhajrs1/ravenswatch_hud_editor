@@ -21,6 +21,7 @@ type LayoutWorkspaceProps = {
   canUndo: boolean;
   collapsedSections: Record<string, boolean>;
   elements: LayoutElement[];
+  unavailableElements: LayoutElement[];
   monitors: MonitorInfo[];
   normalizedInset: number;
   selected: LayoutElement;
@@ -46,6 +47,7 @@ export function LayoutWorkspace({
   canUndo,
   collapsedSections,
   elements,
+  unavailableElements,
   monitors,
   normalizedInset,
   selected,
@@ -126,6 +128,7 @@ export function LayoutWorkspace({
         <ElementTreeSection
           collapsedSections={collapsedSections}
           elements={elements}
+          unavailableElements={unavailableElements}
           selectedId={selectedId}
           onSelect={onSelect}
           onToggleElementVisibility={onToggleElementVisibility}

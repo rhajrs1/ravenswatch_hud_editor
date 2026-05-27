@@ -5,10 +5,13 @@ export function getElement(elements: LayoutElement[], id: ElementId) {
 }
 
 export function getChildren(elements: LayoutElement[], parentId: ElementId | null) {
-  return elements.filter((element) => element.parentId === parentId && !element.hidden);
+  return elements.filter((element) => element.parentId === parentId && !element.hidden && element.availability !== "unavailable");
 }
 
 export function isEffectivelyVisible(element: LayoutElement, elements: LayoutElement[]): boolean {
+  if (element.availability === "unavailable") {
+    return false;
+  }
   if (element.hidden) {
     return false;
   }

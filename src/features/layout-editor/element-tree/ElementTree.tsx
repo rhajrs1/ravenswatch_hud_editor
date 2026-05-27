@@ -7,13 +7,14 @@ import { getChildren, isAncestorHidden, isEffectivelyVisible } from "./elementTr
 type ElementTreeSectionProps = {
   collapsedSections: Record<string, boolean>;
   elements: LayoutElement[];
+  unavailableElements: LayoutElement[];
   selectedId: ElementId;
   onSelect: (id: ElementId) => void;
   onToggleElementVisibility: (id: ElementId) => void;
   onToggleSection: (id: string) => void;
 };
 
-export function ElementTreeSection({ collapsedSections, elements, selectedId, onSelect, onToggleElementVisibility, onToggleSection }: ElementTreeSectionProps) {
+export function ElementTreeSection({ collapsedSections, elements, unavailableElements, selectedId, onSelect, onToggleElementVisibility, onToggleSection }: ElementTreeSectionProps) {
   function renderElementTree(parentId: ElementId | null = null, depth = 0): ReactNode {
     return getChildren(elements, parentId).map((element) => {
       const children = getChildren(elements, element.id);
@@ -48,6 +49,25 @@ export function ElementTreeSection({ collapsedSections, elements, selectedId, on
     <PropertySection collapsedSections={collapsedSections} id="elements" onToggle={onToggleSection} title="Elements">
       <div className="section-content">
         <div className="element-tree">{renderElementTree()}</div>
+        {unavailableElements.length > 0 ? (
+          <div className="element-tree unavailable-tree">
+            <div className="tree-group-label">Unavailable Elements</div>
+            {unavailableElements.map((element) => (
+              <div className="tree-node" key={element.id}>
+                <div className={["tree-row", "hidden", "muted", element.id === selectedId ? "active" : ""].join(" ")}>
+                  <span className="tree-expander" />
+                  <span className="tree-eye">
+                    <IconEyeOff size={15} stroke={2} />
+                  </span>
+                  <button className="tree-label" onClick={() => onSelect(element.id)} title={element.unavailableReason} type="button">
+                    <span className="swatch" style={{ background: element.color }} />
+                    <span>{element.name}</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : null}
       </div>
     </PropertySection>
   );

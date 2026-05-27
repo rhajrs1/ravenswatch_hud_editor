@@ -33,7 +33,9 @@ export async function readLayoutValues(gameDir: string, elements: LayoutElement[
 
 export async function saveLayoutValues(gameDir: string, elements: LayoutElement[]) {
   const patches: LayoutPatch[] = elements.flatMap((element) =>
-    Object.values(element.fields)
+    element.availability === "unavailable"
+      ? []
+      : Object.values(element.fields)
       .filter((field) => field.writable && field.offset)
       .map((field) => ({
         offset: parseHexOffset(field.offset) ?? 0,

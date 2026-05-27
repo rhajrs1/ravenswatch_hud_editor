@@ -58,6 +58,11 @@ export function PropertyPanel({ collapsedSections, selected, selectedMonitor, on
     <aside className="panel">
       <PropertySection collapsedSections={collapsedSections} id="selection" onToggle={onToggleSection} title="Selection">
         <div className="section-content">
+          {selected.availability === "unavailable" ? (
+            <div className="inline-warning">
+              This element is unavailable. {selected.unavailableReason}
+            </div>
+          ) : null}
           <dl className="props">
             <dt>Type</dt>
             <dd>{selected.kind}</dd>
@@ -81,6 +86,7 @@ export function PropertyPanel({ collapsedSections, selected, selectedMonitor, on
                 <dd>
                   <input
                     className="number-input"
+                    disabled={selected.availability === "unavailable" || !selected.fields[fieldName].writable}
                     min={fieldName === "width" || fieldName === "height" ? "0" : undefined}
                     onBlur={() => commitFieldEdit(fieldName)}
                     onChange={(event) => onUpdateElementField(selected.id, fieldName, event.currentTarget.valueAsNumber)}

@@ -41,6 +41,21 @@ export type WidthBasis = {
   basis: "parentWidth" | "parentHeight";
 };
 
+export type LayoutRecord = {
+  marker: number;
+  label: string;
+  kind: number;
+  flagX: number;
+  flagY: number;
+  widthBasisRaw: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  pivotX: number;
+  pivotY: number;
+};
+
 export type ElementId =
   | "left-frame"
   | "hud-left"
@@ -97,11 +112,13 @@ export type ElementId =
   | "modifier-frame-size-ref"
   | "peers-hero-miniatures-frame"
   | "social-options-menu"
+  | "melodies"
   | "consumables-frame"
   | "dream-shards-frame"
   | "reroll-frame"
   | "revive-frame"
-  | "key-frame";
+  | "key-frame"
+  | "note-frame";
 
 export type LayoutElement = {
   id: ElementId;
@@ -110,6 +127,8 @@ export type LayoutElement = {
   kind: "Frame";
   marker: string;
   widthBasis: WidthBasis;
+  availability?: "available" | "unavailable";
+  unavailableReason?: string;
   fields: {
     x: LayoutField;
     y: LayoutField;

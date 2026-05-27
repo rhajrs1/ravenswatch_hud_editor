@@ -4,7 +4,14 @@ use std::path::{Path, PathBuf};
 use tauri::Manager;
 
 const DEFAULT_GAME_DIR: &str = r"C:\Program Files (x86)\Steam\steamapps\common\Ravenswatch";
-const LAYOUT_RELATIVE_PATH: &str = r"DarkTalesResources\_Cooking\MzidisFqiidzyv\Aqurqv\Aqur_Srxxrz!Aqur_Srxxrz.qzidis.ri.MzidisFqiidzyvLqvrwubq.yqz";
+const ACTIVE_LAYOUT_RELATIVE_PATH: &str =
+    r"DarkTalesResources\_Cooking\MzidisFqiidzyv\Aqurqv\Aqur_Srxxrz!Aqur_Srxxrz_Jjtgiq5.qzidis.ri.MzidisFqiidzyvLqvrwubq.yqz";
+const REQUIRED_LAYOUT_LABELS: [&[u8]; 4] = [
+    b"LEFT_FRAME\0",
+    b"RIGHT FRAME\0",
+    b"HUD_Frame_Left\0",
+    b"HUD_Frame_Right\0",
+];
 
 #[derive(Serialize)]
 struct MonitorInfo {
@@ -54,17 +61,45 @@ struct LayoutValue {
     value: f32,
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct LayoutRecord {
+    marker: u64,
+    label: String,
+    kind: u32,
+    flag_x: u8,
+    flag_y: u8,
+    width_basis_raw: u8,
+    x: f32,
+    y: f32,
+    width: f32,
+    height: f32,
+    pivot_x: f32,
+    pivot_y: f32,
+}
+
 #[tauri::command]
 fn app_version() -> &'static str {
     env!("CARGO_PKG_VERSION")
 }
 
-fn layout_path(game_dir: &Path) -> PathBuf {
-    game_dir.join(LAYOUT_RELATIVE_PATH)
+fn contains_required_layout_labels(path: &Path) -> bool {
+    let Ok(data) = fs::read(path) else {
+        return false;
+    };
+
+    REQUIRED_LAYOUT_LABELS
+        .iter()
+        .all(|label| data.windows(label.len()).any(|window| window == *label))
+}
+
+fn find_layout_path(game_dir: &Path) -> Option<PathBuf> {
+    let path = game_dir.join(ACTIVE_LAYOUT_RELATIVE_PATH);
+    (path.is_file() && contains_required_layout_labels(&path)).then_some(path)
 }
 
 fn is_valid_game_dir(game_dir: &Path) -> bool {
-    game_dir.join("Ravenswatch.exe").is_file() && layout_path(game_dir).is_file()
+    game_dir.join("Ravenswatch.exe").is_file() && find_layout_path(game_dir).is_some()
 }
 
 fn config_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
@@ -97,7 +132,7 @@ fn valid_state(game_dir: &Path, source: &str) -> GameFolderState {
     GameFolderState {
         found: true,
         game_dir: Some(game_dir.to_string_lossy().to_string()),
-        layout_path: Some(layout_path(game_dir).to_string_lossy().to_string()),
+        layout_path: find_layout_path(game_dir).map(|path| path.to_string_lossy().to_string()),
         source: source.to_string(),
         message: "Ravenswatch game folder detected.".to_string(),
     }
@@ -183,7 +218,8 @@ fn save_layout_values(game_dir: String, patches: Vec<LayoutPatch>) -> Result<(),
         return Err("The configured Ravenswatch game folder is not valid.".to_string());
     }
 
-    let path = layout_path(&game_dir);
+    let path = find_layout_path(&game_dir)
+        .ok_or_else(|| "The Ravenswatch layout file could not be found.".to_string())?;
     let mut data = fs::read(&path).map_err(|error| error.to_string())?;
 
     for patch in patches {
@@ -212,7 +248,8 @@ fn backup_layout_file(game_dir: String, target_path: String) -> Result<(), Strin
         return Err("The configured Ravenswatch game folder is not valid.".to_string());
     }
 
-    let source = layout_path(&game_dir);
+    let source = find_layout_path(&game_dir)
+        .ok_or_else(|| "The Ravenswatch layout file could not be found.".to_string())?;
     let target = PathBuf::from(target_path);
     fs::copy(source, target)
         .map(|_| ())
@@ -231,10 +268,122 @@ fn restore_layout_file(game_dir: String, backup_path: String) -> Result<(), Stri
         return Err("The selected backup file does not exist.".to_string());
     }
 
-    let target = layout_path(&game_dir);
+    let target = find_layout_path(&game_dir)
+        .ok_or_else(|| "The Ravenswatch layout file could not be found.".to_string())?;
     fs::copy(backup, target)
         .map(|_| ())
         .map_err(|error| error.to_string())
+}
+
+fn read_f32(data: &[u8], offset: usize) -> Option<f32> {
+    let end = offset.checked_add(4)?;
+    let bytes = data.get(offset..end)?;
+    Some(f32::from_le_bytes(bytes.try_into().ok()?))
+}
+
+fn read_u32(data: &[u8], offset: usize) -> Option<u32> {
+    let end = offset.checked_add(4)?;
+    let bytes = data.get(offset..end)?;
+    Some(u32::from_le_bytes(bytes.try_into().ok()?))
+}
+
+fn read_label(data: &[u8], offset: usize) -> Option<String> {
+    let tail = data.get(offset..)?;
+    let end = tail.iter().position(|byte| *byte == 0)?;
+    if end == 0 {
+        return None;
+    }
+
+    let raw = &tail[..end];
+    if !raw.iter().all(|byte| byte.is_ascii_graphic() || *byte == b' ') {
+        return None;
+    }
+
+    String::from_utf8(raw.to_vec()).ok()
+}
+
+fn scan_records(data: &[u8]) -> Vec<LayoutRecord> {
+    const SIGNATURE: &[u8; 8] = b"\x22\x22\xBB\xAA\x11\x11\xBB\xAA";
+    const RECORD_MIN_LEN: usize = 65;
+
+    let mut records = Vec::new();
+    let mut index = 0usize;
+
+    while let Some(relative) = data[index..]
+        .windows(SIGNATURE.len())
+        .position(|window| window == SIGNATURE)
+    {
+        let marker = index + relative;
+        index = marker + 1;
+
+        let Some(kind) = read_u32(data, marker + 8) else {
+            continue;
+        };
+        let Some(ref_count) = read_u32(data, marker + 53) else {
+            continue;
+        };
+        let Ok(ref_count) = usize::try_from(ref_count) else {
+            continue;
+        };
+        let Some(label_offset) = marker
+            .checked_add(RECORD_MIN_LEN)
+            .and_then(|offset| offset.checked_add(ref_count.saturating_mul(4)))
+        else {
+            continue;
+        };
+        let Some(label) = read_label(data, label_offset) else {
+            continue;
+        };
+
+        let Some(x) = read_f32(data, marker + 14) else {
+            continue;
+        };
+        let Some(y) = read_f32(data, marker + 18) else {
+            continue;
+        };
+        let Some(width) = read_f32(data, marker + 25) else {
+            continue;
+        };
+        let Some(height) = read_f32(data, marker + 29) else {
+            continue;
+        };
+        let Some(pivot_x) = read_f32(data, marker + 35) else {
+            continue;
+        };
+        let Some(pivot_y) = read_f32(data, marker + 39) else {
+            continue;
+        };
+
+        records.push(LayoutRecord {
+            marker: marker as u64,
+            label,
+            kind,
+            flag_x: *data.get(marker + 22).unwrap_or(&0),
+            flag_y: *data.get(marker + 23).unwrap_or(&0),
+            width_basis_raw: *data.get(marker + 24).unwrap_or(&0),
+            x,
+            y,
+            width,
+            height,
+            pivot_x,
+            pivot_y,
+        });
+    }
+
+    records
+}
+
+#[tauri::command]
+fn scan_layout_records(game_dir: String) -> Result<Vec<LayoutRecord>, String> {
+    let game_dir = PathBuf::from(game_dir);
+    if !is_valid_game_dir(&game_dir) {
+        return Err("The configured Ravenswatch game folder is not valid.".to_string());
+    }
+
+    let path = find_layout_path(&game_dir)
+        .ok_or_else(|| "The Ravenswatch layout file could not be found.".to_string())?;
+    let data = fs::read(&path).map_err(|error| error.to_string())?;
+    Ok(scan_records(&data))
 }
 
 #[tauri::command]
@@ -247,7 +396,8 @@ fn load_layout_values(
         return Err("The configured Ravenswatch game folder is not valid.".to_string());
     }
 
-    let path = layout_path(&game_dir);
+    let path = find_layout_path(&game_dir)
+        .ok_or_else(|| "The Ravenswatch layout file could not be found.".to_string())?;
     let data = fs::read(&path).map_err(|error| error.to_string())?;
     let mut values = Vec::with_capacity(requests.len());
 
@@ -323,6 +473,7 @@ pub fn run() {
             backup_layout_file,
             load_layout_values,
             restore_layout_file,
+            scan_layout_records,
             save_layout_values
         ])
         .run(tauri::generate_context!())

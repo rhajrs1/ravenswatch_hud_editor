@@ -4,12 +4,19 @@ import { confirm, open, save } from "@tauri-apps/plugin-dialog";
 import "./App.css";
 
 import { AppHeader } from "./features/layout-editor/header/AppHeader";
-import { applyLayoutCommand, createLayoutCommand } from "./features/layout-editor/history/layoutHistoryModel";
+import { createLayoutCommand } from "./features/layout-editor/history/layoutHistoryModel";
 import type { LayoutCommand, LayoutFieldChange, LayoutFieldName } from "./features/layout-editor/history/layoutHistoryModel";
-import { backupLayoutFile, parseHexOffset, readLayoutValues, restoreLayoutFile, saveLayoutValues } from "./features/layout-editor/model/persistence";
+import { backupLayoutFile, restoreLayoutFile, saveLayoutValues } from "./features/layout-editor/model/persistence";
 import { createLayoutSnapshot, layoutSnapshotsEqual } from "./features/layout-editor/model/layoutSnapshot";
 import type { LayoutSnapshot } from "./features/layout-editor/model/layoutSnapshot";
-import { initialElements, mergeElementSchema } from "./features/layout-editor/model/schema";
+import {
+  applyLayoutDataCommand,
+  initializeLayoutData,
+  toggleLayoutElementVisibility,
+  updateLayoutElementField,
+  updateLayoutElementPosition,
+} from "./features/layout-editor/model/layoutDataManager";
+import { initialElements } from "./features/layout-editor/model/schema";
 import type { ElementId, GameFolderState, LayoutElement, MonitorInfo, NativeMonitorInfo } from "./features/layout-editor/model/types";
 import { LayoutWorkspace } from "./features/layout-editor/workspace/LayoutWorkspace";
 
@@ -33,6 +40,7 @@ function pushHistory(stack: LayoutCommand[], command: LayoutCommand) {
 function App() {
   const shellRef = useRef<HTMLDivElement>(null);
   const [elements, setElements] = useState(initialElements);
+  const [unavailableElements, setUnavailableElements] = useState<LayoutElement[]>([]);
   const [selectedId, setSelectedId] = useState<LayoutElement["id"]>("hud-right");
   const [monitors, setMonitors] = useState<MonitorInfo[]>([FALLBACK_MONITOR]);
   const [selectedMonitorId, setSelectedMonitorId] = useState(FALLBACK_MONITOR.id);
@@ -42,40 +50,28 @@ function App() {
   const [presetMenuOpen, setPresetMenuOpen] = useState(false);
   const [gameState, setGameState] = useState<GameFolderState | null>(null);
   const [gameStateError, setGameStateError] = useState<string | null>(null);
+  const [layoutReady, setLayoutReady] = useState(false);
+  const [layoutError, setLayoutError] = useState<string | null>(null);
   const [undoStack, setUndoStack] = useState<LayoutCommand[]>([]);
   const [redoStack, setRedoStack] = useState<LayoutCommand[]>([]);
   const [savedBaseline, setSavedBaseline] = useState<LayoutSnapshot | null>(null);
 
-  useEffect(() => {
-    setElements((current) => mergeElementSchema(current));
-  }, []);
-
   async function reloadLayoutValuesFromDisk(gameDir: string) {
-    const values = await readLayoutValues(gameDir, initialElements);
-    const valueByOffset = new Map(values.map((value) => [value.offset, value.value]));
-
-    const nextElements = mergeElementSchema(elements).map((element) => ({
-        ...element,
-        fields: Object.fromEntries(
-          Object.entries(element.fields).map(([key, field]) => {
-            const offset = parseHexOffset(field.offset);
-            return [
-              key,
-              {
-                ...field,
-                currentValue:
-                  offset !== null && valueByOffset.has(offset)
-                    ? valueByOffset.get(offset)!
-                    : field.currentValue,
-              },
-            ];
-          }),
-        ) as LayoutElement["fields"],
-      }));
-    setElements(nextElements);
-    setSavedBaseline(createLayoutSnapshot(nextElements));
+    const nextData = await initializeLayoutData(gameDir);
+    setElements(nextData.elements);
+    setUnavailableElements(nextData.unavailableElements);
+    const nextSelected =
+      nextData.elements.find((element) => element.id === selectedId) ??
+      nextData.elements[0] ??
+      nextData.unavailableElements[0];
+    if (nextSelected) {
+      setSelectedId(nextSelected.id);
+    }
+    setSavedBaseline(createLayoutSnapshot(nextData.elements));
     setUndoStack([]);
     setRedoStack([]);
+    setLayoutError(null);
+    setLayoutReady(true);
   }
 
   useEffect(() => {
@@ -91,12 +87,15 @@ function App() {
         return;
       }
 
+      setLayoutReady(false);
+      setLayoutError(null);
       await reloadLayoutValuesFromDisk(gameDir);
     }
 
     loadLayoutValues().catch((error) => {
       if (!cancelled) {
-        setGameStateError(String(error));
+        setLayoutReady(false);
+        setLayoutError(String(error));
       }
     });
 
@@ -105,7 +104,11 @@ function App() {
     };
   }, [gameState?.found, gameState?.gameDir]);
 
-  const selected = elements.find((element) => element.id === selectedId) ?? elements[0];
+  const selected =
+    elements.find((element) => element.id === selectedId) ??
+    unavailableElements.find((element) => element.id === selectedId) ??
+    elements[0] ??
+    unavailableElements[0];
   const selectedMonitor =
     monitors.find((monitor) => monitor.id === selectedMonitorId) ?? monitors[0];
   const safeWidth = selectedMonitor.height * TARGET_ASPECT;
@@ -248,12 +251,14 @@ function App() {
     const command = createLayoutCommand(
       "Reset Defaults",
       elements.flatMap((element) =>
-        (Object.keys(element.fields) as LayoutFieldName[]).map((field) => ({
-          elementId: element.id,
-          field,
-          before: element.fields[field].currentValue,
-          after: element.fields[field].defaultValue,
-        })),
+        element.availability === "unavailable"
+          ? []
+          : (Object.keys(element.fields) as LayoutFieldName[]).map((field) => ({
+              elementId: element.id,
+              field,
+              before: element.fields[field].currentValue,
+              after: element.fields[field].defaultValue,
+            })),
       ),
     );
     if (!command) {
@@ -306,32 +311,11 @@ function App() {
       return;
     }
     await saveLayoutValues(gameState.gameDir, elements);
-    setSavedBaseline(createLayoutSnapshot(elements));
+    await reloadLayoutValuesFromDisk(gameState.gameDir);
   }
 
   function updateElementPosition(id: LayoutElement["id"], nextX: number, nextY: number) {
-    setElements((current) =>
-      current.map((element) => {
-        if (element.id !== id) {
-          return element;
-        }
-
-        return {
-          ...element,
-          fields: {
-            ...element.fields,
-            x: {
-              ...element.fields.x,
-              currentValue: nextX,
-            },
-            y: {
-              ...element.fields.y,
-              currentValue: nextY,
-            },
-          },
-        };
-      }),
-    );
+    setElements((current) => updateLayoutElementPosition(current, id, nextX, nextY));
   }
 
   function commitElementMove(id: LayoutElement["id"], before: { x: number; y: number }, after: { x: number; y: number }) {
@@ -365,22 +349,7 @@ function App() {
       return;
     }
 
-    setElements((current) =>
-      current.map((element) =>
-        element.id === id
-          ? {
-              ...element,
-              fields: {
-                ...element.fields,
-                [fieldName]: {
-                  ...element.fields[fieldName],
-                  currentValue: value,
-                },
-              },
-            }
-          : element,
-      ),
-    );
+    setElements((current) => updateLayoutElementField(current, id, fieldName, value));
   }
 
   function commitElementField(
@@ -405,7 +374,7 @@ function App() {
   }
 
   function commitCommand(command: LayoutCommand) {
-    setElements((current) => applyLayoutCommand(current, command, "after"));
+    setElements((current) => applyLayoutDataCommand(current, command, "after"));
     setUndoStack((current) => pushHistory(current, command));
     setRedoStack([]);
   }
@@ -417,7 +386,7 @@ function App() {
         return currentUndoStack;
       }
 
-      setElements((current) => applyLayoutCommand(current, command, "before"));
+      setElements((current) => applyLayoutDataCommand(current, command, "before"));
       setRedoStack((currentRedoStack) => [...currentRedoStack, command]);
       return currentUndoStack.slice(0, -1);
     });
@@ -430,7 +399,7 @@ function App() {
         return currentRedoStack;
       }
 
-      setElements((current) => applyLayoutCommand(current, command, "after"));
+      setElements((current) => applyLayoutDataCommand(current, command, "after"));
       setUndoStack((currentUndoStack) => pushHistory(currentUndoStack, command));
       return currentRedoStack.slice(0, -1);
     });
@@ -465,11 +434,7 @@ function App() {
   }
 
   function toggleElementVisibility(id: ElementId) {
-    setElements((current) =>
-      current.map((element) =>
-        element.id === id ? { ...element, visible: !element.visible } : element,
-      ),
-    );
+    setElements((current) => toggleLayoutElementVisibility(current, id));
   }
 
 
@@ -505,30 +470,40 @@ function App() {
           </div>
         </section>
       ) : gameState?.found ? (
-        <LayoutWorkspace
-          canRedo={redoStack.length > 0}
-          canUndo={undoStack.length > 0}
-          collapsedSections={collapsedSections}
-          elements={elements}
-          monitors={monitors}
-          normalizedInset={normalizedInset}
-          selected={selected}
-          selectedId={selectedId}
-          selectedMonitor={selectedMonitor}
-          selectedMonitorId={selectedMonitorId}
-          showSafeArea={showSafeArea}
-          onCommitElementField={commitElementField}
-          onCommitElementMove={commitElementMove}
-          onMonitorChange={setSelectedMonitorId}
-          onMoveElement={updateElementPosition}
-          onRedo={redoLayoutChange}
-          onSelect={setSelectedId}
-          onShowSafeAreaChange={setShowSafeArea}
-          onToggleElementVisibility={toggleElementVisibility}
-          onToggleSection={toggleSection}
-          onUndo={undoLayoutChange}
-          onUpdateElementField={updateElementField}
-        />
+        !layoutReady || layoutError ? (
+          <section className="empty-state">
+            <div className="empty-card">
+              <h2>{layoutError ? "Layout data unavailable" : "Loading layout data"}</h2>
+              <p>{layoutError ?? "Scanning the saved game layout file and resolving supported HUD elements."}</p>
+            </div>
+          </section>
+        ) : (
+          <LayoutWorkspace
+            canRedo={redoStack.length > 0}
+            canUndo={undoStack.length > 0}
+            collapsedSections={collapsedSections}
+            elements={elements}
+            unavailableElements={unavailableElements}
+            monitors={monitors}
+            normalizedInset={normalizedInset}
+            selected={selected}
+            selectedId={selectedId}
+            selectedMonitor={selectedMonitor}
+            selectedMonitorId={selectedMonitorId}
+            showSafeArea={showSafeArea}
+            onCommitElementField={commitElementField}
+            onCommitElementMove={commitElementMove}
+            onMonitorChange={setSelectedMonitorId}
+            onMoveElement={updateElementPosition}
+            onRedo={redoLayoutChange}
+            onSelect={setSelectedId}
+            onShowSafeAreaChange={setShowSafeArea}
+            onToggleElementVisibility={toggleElementVisibility}
+            onToggleSection={toggleSection}
+            onUndo={undoLayoutChange}
+            onUpdateElementField={updateElementField}
+          />
+        )
       ) : (
         <section className="empty-state">
           <div className="empty-card">
